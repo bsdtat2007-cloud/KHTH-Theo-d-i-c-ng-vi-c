@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, LogOut, PlayCircle, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, LogOut, PlayCircle, Archive, ArchiveRestore, Bell } from 'lucide-react';
 
 // ---------- Danh mục nhóm công việc gốc (theo Dự thảo phân công 1908) ----------
 const NHOM_CV = [
@@ -32,20 +32,23 @@ const COLOR_TRANGTHAI = { 'Đã hoàn thành': '#1E7A5C', 'Đang xử lý': '#1B
 
 const ADMIN_PIN = '2026';
 
+// Mỗi nhân viên có 1 mã PIN riêng (4 số) để đăng nhập đúng tên mình.
+// Thu có thể đổi PIN bất kỳ lúc nào bằng cách sửa giá trị "pin" bên dưới.
 const NHAN_SU = [
-  'ThS. Lê Thanh Tâm',
-  'ThS. Võ Tấn Cường',
-  'BS. Dương Thị Anh Thư',
-  'ThS. Lê Huyền Trân',
-  'ĐD.CKI. Nguyễn Thị Ngọc Bảo',
-  'BS. Nguyễn Minh Nhựt',
-  'CN. Nguyễn Ngọc Thơ',
-  'CN. Trần Thị Huệ',
-  'BSCKI. Kim Ngọc Khánh Vinh',
-  'BSCKI. Lại Khôi Nguyên',
-  'ThS. Nguyễn Quang Đạt',
-  'CN. Nguyễn Quách Ngọc Trâm',
+  { name: 'ThS. Lê Thanh Tâm', pin: '1111' },
+  { name: 'ThS. Võ Tấn Cường', pin: '2222' },
+  { name: 'BS. Dương Thị Anh Thư', pin: '3333' },
+  { name: 'ThS. Lê Huyền Trân', pin: '4444' },
+  { name: 'ĐD.CKI. Nguyễn Thị Ngọc Bảo', pin: '5555' },
+  { name: 'BS. Nguyễn Minh Nhựt', pin: '6666' },
+  { name: 'CN. Nguyễn Ngọc Thơ', pin: '7777' },
+  { name: 'CN. Trần Thị Huệ', pin: '8888' },
+  { name: 'BSCKI. Kim Ngọc Khánh Vinh', pin: '9999' },
+  { name: 'BSCKI. Lại Khôi Nguyên', pin: '1212' },
+  { name: 'ThS. Nguyễn Quang Đạt', pin: '3434' },
+  { name: 'CN. Nguyễn Quách Ngọc Trâm', pin: '5656' },
 ];
+const NHAN_SU_NAMES = NHAN_SU.map(n => n.name);
 
 const SEED_TASKS = [];
 
@@ -73,6 +76,16 @@ function fmtDateTime(iso) {
   const hh = String(d.getHours()).padStart(2,'0');
   const mi = String(d.getMinutes()).padStart(2,'0');
   return `${hh}:${mi} ${dd}/${mm}`;
+}
+
+// Ghi nhớ lần cuối mỗi nhân viên xem thông báo (lưu theo trình duyệt/thiết bị đang dùng)
+function getLastSeen(staffName) {
+  try { return localStorage.getItem('khth:lastSeen:' + staffName) || null; }
+  catch (e) { return null; }
+}
+function setLastSeen(staffName, iso) {
+  try { localStorage.setItem('khth:lastSeen:' + staffName, iso); }
+  catch (e) { /* ignore */ }
 }
 
 import { db } from './firebase';
@@ -104,6 +117,8 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [toast, setToast] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeTasks((loaded) => {
@@ -127,7 +142,7 @@ export default function App() {
       showToast('Đã cập nhật công việc');
     } else {
       const taoBoi = isAdmin ? 'admin' : staffName;
-      next = [...tasks, { ...task, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi }];
+      next = [...tasks, { ...task, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi, createdAt: nowISO() }];
       showToast(isAdmin ? 'Đã giao việc mới' : 'Đã thêm việc');
     }
     persist(next);
@@ -159,9 +174,9 @@ export default function App() {
   };
 
   const phuTrachList = useMemo(() => {
-    if (!tasks) return NHAN_SU;
+    if (!tasks) return NHAN_SU_NAMES;
     const fromTasks = tasks.map(t => t.phuTrach).filter(Boolean);
-    return [...new Set([...NHAN_SU, ...fromTasks])];
+    return [...new Set([...NHAN_SU_NAMES, ...fromTasks])];
   }, [tasks]);
 
   // Tách việc đang hoạt động và việc đã lưu trữ (hoàn thành > 90 ngày)
@@ -197,6 +212,38 @@ export default function App() {
     const overdue = filtered.filter(t => t.trangThai !== 'Đã hoàn thành' && daysLeft(t.hanHoanThanh) < 0).length;
     return { byPriority, byStatus, total, overdue };
   }, [filtered]);
+
+  // Thông báo cho nhân viên: việc mới được giao (kể từ lần xem gần nhất) + việc sắp/đã tới hạn
+  const notifications = useMemo(() => {
+    if (!staffName || !tasks) return { newTasks: [], dueTasks: [] };
+    const lastSeen = getLastSeen(staffName);
+    const mine = tasks.filter(t => t.phuTrach === staffName);
+    const newTasks = lastSeen
+      ? mine.filter(t => t.taoBoi === 'admin' && t.createdAt && t.createdAt > lastSeen)
+      : [];
+    const dueTasks = mine.filter(t => t.trangThai !== 'Đã hoàn thành' && daysLeft(t.hanHoanThanh) <= 1);
+    return { newTasks, dueTasks };
+  }, [tasks, staffName]);
+
+  const notificationCount = notifications.newTasks.length + notifications.dueTasks.length;
+
+  useEffect(() => {
+    if (staffName) {
+      // Đánh dấu đã xem tại thời điểm đăng nhập lần này (áp dụng cho lần thông báo tiếp theo)
+      const lastSeen = getLastSeen(staffName);
+      if (!lastSeen) setLastSeen(staffName, nowISO());
+    } else {
+      setAutoShown(false);
+    }
+  }, [staffName]);
+
+  // Tự động bật cảnh báo giữa màn hình ngay khi nhân viên đăng nhập, nếu có thông báo
+  useEffect(() => {
+    if (staffName && tasks && !autoShown) {
+      setAutoShown(true);
+      if (notificationCount > 0) setShowNotifications(true);
+    }
+  }, [staffName, tasks, autoShown, notificationCount]);
 
   const maxBar = Math.max(1, ...stats.byPriority.map(p => p.value));
 
@@ -259,6 +306,17 @@ export default function App() {
                 }} title="Xoá toàn bộ dữ liệu"
                 style={{background:'rgba(255,255,255,0.12)', color:'#fff', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
                 <Trash2 size={15}/>
+              </button>
+            )}
+            {staffName && (
+              <button className="btn" onClick={() => setShowNotifications(true)} title="Thông báo"
+                style={{position:'relative', background:'rgba(255,255,255,0.12)', color:'#fff', width:34, height:34, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                <Bell size={15}/>
+                {notificationCount > 0 && (
+                  <span style={{position:'absolute', top:-4, right:-4, background:RED, color:'#fff', fontSize:9.5, fontWeight:700, minWidth:16, height:16, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px', border:'2px solid ' + SKY_DEEP}}>
+                    {notificationCount}
+                  </span>
+                )}
               </button>
             )}
             <button className="btn" onClick={() => setRole(null)} title="Đổi chế độ"
@@ -378,6 +436,16 @@ export default function App() {
         />
       )}
 
+      {showNotifications && staffName && (
+        <NotificationPanel
+          notifications={notifications}
+          onClose={() => {
+            setLastSeen(staffName, nowISO());
+            setShowNotifications(false);
+          }}
+        />
+      )}
+
       {toast && (
         <div style={{position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)', background:NAVY_DEEP, color:'#fff', padding:'10px 18px', borderRadius:10, fontSize:13.5, animation:'fadeIn .2s ease', boxShadow:'0 6px 20px rgba(0,0,0,0.25)', zIndex:50}}>
           {toast}
@@ -387,14 +455,104 @@ export default function App() {
   );
 }
 
+function greetingByHour() {
+  const h = new Date().getHours();
+  if (h < 11) return 'Chúc ngày mới tốt lành!';
+  if (h < 14) return 'Chúc buổi trưa vui vẻ!';
+  if (h < 18) return 'Chúc buổi chiều làm việc hiệu quả!';
+  return 'Chúc buổi tối an lành!';
+}
+
+function NotificationPanel({ notifications, onClose }) {
+  const { newTasks, dueTasks } = notifications;
+  const hasAny = newTasks.length > 0 || dueTasks.length > 0;
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const summary = newTasks.length > 0 && dueTasks.length > 0
+    ? `Hôm nay bạn có ${pad2(newTasks.length)} việc mới được giao và ${pad2(dueTasks.length)} việc đến hạn.`
+    : newTasks.length > 0
+      ? `Hôm nay bạn có ${pad2(newTasks.length)} việc mới được giao.`
+      : dueTasks.length > 0
+        ? `Hôm nay bạn có ${pad2(dueTasks.length)} việc đến hạn.`
+        : 'Bạn chưa có thông báo mới nào.';
+  return (
+    <div style={{position:'fixed', inset:0, background:'rgba(18,37,72,0.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:45, animation:'fadeIn .15s ease', padding:24}}
+      onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff', width:'100%', maxWidth:420, borderRadius:18, padding:'22px', boxShadow:'0 20px 60px rgba(0,0,0,0.35)', animation:'slideUp .2s ease', maxHeight:'80vh', overflowY:'auto'}}>
+        <div style={{display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', marginBottom:16}}>
+          <div style={{width:52, height:52, borderRadius:'50%', background: hasAny ? '#FBEAEA' : '#EAF2F7', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:10}}>
+            <Bell size={24} color={hasAny ? RED : SKY_DEEP}/>
+          </div>
+          <h2 style={{margin:0, fontSize:16.5, fontWeight:800, fontFamily:'Georgia, serif', color:NAVY}}>
+            {greetingByHour()}
+          </h2>
+          <p style={{margin:'6px 0 0', fontSize:13, color:'#6b6258', lineHeight:1.4}}>{summary}</p>
+        </div>
+
+        {!hasAny && (
+          <div style={{textAlign:'center', padding:'8px 0 20px', color:'#A89B85', fontSize:13}}>Không có thông báo mới</div>
+        )}
+
+        {newTasks.length > 0 && (
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:11.5, fontWeight:700, color:'#8a8072', marginBottom:8, letterSpacing:'0.03em'}}>VIỆC MỚI ĐƯỢC GIAO</div>
+            {newTasks.map(t => (
+              <div key={t.id} style={{padding:'10px 12px', background:'#EAF2F7', borderRadius:10, marginBottom:8}}>
+                <div style={{fontSize:13.5, fontWeight:600, color:'#20242B'}}>{t.ten}</div>
+                <div style={{fontSize:11, color:'#1B6FA8', marginTop:3}}>Hạn: {t.hanHoanThanh}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {dueTasks.length > 0 && (
+          <div style={{marginBottom:hasAny ? 6 : 0}}>
+            <div style={{fontSize:11.5, fontWeight:700, color:'#8a8072', marginBottom:8, letterSpacing:'0.03em'}}>SẮP / ĐÃ ĐẾN HẠN</div>
+            {dueTasks.map(t => {
+              const dl = daysLeft(t.hanHoanThanh);
+              const label = dl < 0 ? `Trễ ${Math.abs(dl)} ngày` : dl === 0 ? 'Đến hạn hôm nay' : 'Đến hạn ngày mai';
+              return (
+                <div key={t.id} style={{padding:'10px 12px', background:'#FBEAEA', borderRadius:10, marginBottom:8}}>
+                  <div style={{fontSize:13.5, fontWeight:600, color:'#20242B'}}>{t.ten}</div>
+                  <div style={{fontSize:11, color:RED, marginTop:3, fontWeight:600}}>{label}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <button className="btn" onClick={onClose}
+          style={{width:'100%', padding:12, borderRadius:11, background:NAVY, color:'#fff', fontWeight:700, fontSize:14, marginTop:6}}>
+          Đã xem
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdminLogin }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('');
+  const [staffStep, setStaffStep] = useState('pick'); // 'pick' -> 'pin'
+  const [staffPin, setStaffPin] = useState('');
+  const [staffError, setStaffError] = useState('');
 
   const tryLogin = () => {
     if (pin === ADMIN_PIN) { onAdminLogin(); setPin(''); setError(''); }
     else setError('Sai mã PIN, vui lòng thử lại');
+  };
+
+  const goToStaffPin = () => {
+    if (!selectedStaff) return;
+    setStaffStep('pin');
+    setStaffPin('');
+    setStaffError('');
+  };
+
+  const tryStaffLogin = () => {
+    const person = NHAN_SU.find(n => n.name === selectedStaff);
+    if (person && staffPin === person.pin) { onStaff(selectedStaff); }
+    else setStaffError('Sai mã PIN, vui lòng thử lại');
   };
 
   return (
@@ -421,15 +579,35 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
             <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10, color:NAVY}}>
               <User size={18}/><span style={{fontWeight:700, fontSize:15}}>Nhân viên</span>
             </div>
-            <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
-              style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5, marginBottom:10, background:'#fff'}}>
-              <option value="">Chọn tên của bạn...</option>
-              {staffList.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button className="btn" disabled={!selectedStaff} onClick={()=>onStaff(selectedStaff)}
-              style={{width:'100%', padding:11, borderRadius:9, background: selectedStaff ? NAVY : '#E3DACB', color:'#fff', fontWeight:700, fontSize:13.5}}>
-              Vào xem việc của tôi
-            </button>
+
+            {staffStep === 'pick' ? (
+              <>
+                <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
+                  style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5, marginBottom:10, background:'#fff'}}>
+                  <option value="">Chọn tên của bạn...</option>
+                  {staffList.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <button className="btn" disabled={!selectedStaff} onClick={goToStaffPin}
+                  style={{width:'100%', padding:11, borderRadius:9, background: selectedStaff ? NAVY : '#E3DACB', color:'#fff', fontWeight:700, fontSize:13.5}}>
+                  Tiếp tục
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{fontSize:12.5, color:'#6b6258', marginBottom:8}}>Nhập mã PIN của <strong>{selectedStaff}</strong></div>
+                <input type="password" value={staffPin} onChange={e=>{setStaffPin(e.target.value); setStaffError('');}}
+                  onKeyDown={e => e.key==='Enter' && tryStaffLogin()}
+                  placeholder="••••" autoFocus inputMode="numeric" maxLength={6}
+                  style={{width:'100%', padding:'11px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:16, letterSpacing:4, textAlign:'center', marginBottom:10}}/>
+                {staffError && <div style={{color:RED, fontSize:12, marginBottom:10}}>{staffError}</div>}
+                <div style={{display:'flex', gap:8}}>
+                  <button className="btn" onClick={()=>{setStaffStep('pick'); setStaffError('');}}
+                    style={{flex:1, padding:11, borderRadius:9, background:'#F0EBE0', color:'#6b6258', fontWeight:600, fontSize:13.5}}>Quay lại</button>
+                  <button className="btn" onClick={tryStaffLogin}
+                    style={{flex:1, padding:11, borderRadius:9, background:NAVY, color:'#fff', fontWeight:700, fontSize:13.5}}>Vào</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : (
