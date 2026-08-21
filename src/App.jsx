@@ -112,6 +112,8 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [filterNhom, setFilterNhom] = useState('all');
   const [filterPhuTrach, setFilterPhuTrach] = useState('all');
+  const [filterFrom, setFilterFrom] = useState('');
+  const [filterTo, setFilterTo] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -193,17 +195,20 @@ export default function App() {
   const visibleTasks = useMemo(() => {
     const pool = showArchive ? archivedTasks : activeTasks;
     if (staffName) return pool.filter(t => t.phuTrach === staffName);
-    return pool;
+    // Quản lý không thấy các việc được đánh dấu "riêng tư" (chỉ người tự tạo mới thấy)
+    return pool.filter(t => !t.riengTu);
   }, [activeTasks, archivedTasks, staffName, showArchive]);
 
   const filtered = useMemo(() => {
     return visibleTasks.filter(t => {
       if (filterNhom !== 'all' && t.nhom !== filterNhom) return false;
       if (!staffName && filterPhuTrach !== 'all' && t.phuTrach !== filterPhuTrach) return false;
+      if (!staffName && filterFrom && t.hanHoanThanh < filterFrom) return false;
+      if (!staffName && filterTo && t.hanHoanThanh > filterTo) return false;
       if (search && !t.ten.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [visibleTasks, filterNhom, filterPhuTrach, search, staffName]);
+  }, [visibleTasks, filterNhom, filterPhuTrach, filterFrom, filterTo, search, staffName]);
 
   const stats = useMemo(() => {
     const byPriority = MUC_UU_TIEN.map(p => ({ name: p, value: filtered.filter(t => t.uuTien === p).length }));
@@ -369,6 +374,21 @@ export default function App() {
             <SelectBox value={filterPhuTrach} onChange={setFilterPhuTrach} options={[{v:'all', l:'Tất cả người phụ trách'}, ...phuTrachList.map(p=>({v:p,l:p}))]} getLabel={o=>o.l} getValue={o=>o.v} minWidth={140}/>
           )}
         </div>
+
+        {!staffName && (
+          <div style={{display:'flex', gap:8, marginBottom:16, flexWrap:'wrap', alignItems:'center'}}>
+            <span style={{fontSize:12, color:'#8a8072', fontWeight:600, flexShrink:0}}>Khoảng thời gian:</span>
+            <input type="date" value={filterFrom} onChange={e=>setFilterFrom(e.target.value)}
+              style={{padding:'7px 10px', borderRadius:9, border:'1px solid #E3DACB', fontSize:12.5, background:'#fff'}}/>
+            <span style={{fontSize:12, color:'#A89B85'}}>đến</span>
+            <input type="date" value={filterTo} onChange={e=>setFilterTo(e.target.value)}
+              style={{padding:'7px 10px', borderRadius:9, border:'1px solid #E3DACB', fontSize:12.5, background:'#fff'}}/>
+            {(filterFrom || filterTo) && (
+              <button className="btn" onClick={()=>{setFilterFrom(''); setFilterTo('');}}
+                style={{fontSize:11.5, color:RED, background:'transparent', padding:'4px 8px'}}>Xoá lọc</button>
+            )}
+          </div>
+        )}
 
         {/* Charts */}
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16}}>
@@ -685,6 +705,9 @@ function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDel
                     {selfCreated && (
                       <span style={{fontSize:9.5, padding:'1px 7px', borderRadius:20, background:'#EDE7DA', color:'#8a7350', fontWeight:600}}>Tự thêm</span>
                     )}
+                    {t.riengTu && (
+                      <span style={{fontSize:9.5, padding:'1px 7px', borderRadius:20, background:'#FBEAEA', color:RED, fontWeight:600}}>Riêng tư</span>
+                    )}
                   </div>
                   <div style={{fontSize:10, color:'#B8ADA0', marginTop:3}}>{t.nhom} · {nhomTen}</div>
                   {(t.batDauLuc || t.hoanThanhLuc) && (
@@ -771,12 +794,13 @@ function TaskForm({ initial, phuTrachList, isAdmin, staffName, onCancel, onSave 
   const [hanHoanThanh, setHanHoanThanh] = useState(initial?.hanHoanThanh || todayISO());
   const [trangThai, setTrangThai] = useState(initial?.trangThai || 'Chưa bắt đầu');
   const [ghiChu, setGhiChu] = useState(initial?.ghiChu || '');
+  const [riengTu, setRiengTu] = useState(initial?.riengTu || false);
   const [error, setError] = useState('');
 
   const submit = () => {
     if (!ten.trim()) { setError('Vui lòng nhập tên công việc'); return; }
     if (!phuTrach.trim()) { setError('Vui lòng nhập người phụ trách'); return; }
-    onSave({ ten: ten.trim(), nhom, phuTrach: phuTrach.trim(), uuTien, hanHoanThanh, trangThai, ghiChu });
+    onSave({ ten: ten.trim(), nhom, phuTrach: phuTrach.trim(), uuTien, hanHoanThanh, trangThai, ghiChu, riengTu: !isAdmin ? riengTu : false });
   };
 
   const formTitle = initial ? 'Sửa công việc' : (isAdmin ? 'Giao việc mới' : 'Thêm việc');
@@ -853,6 +877,19 @@ function TaskForm({ initial, phuTrachList, isAdmin, staffName, onCancel, onSave 
           <textarea value={ghiChu} onChange={e=>setGhiChu(e.target.value)} rows={2}
             style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5, resize:'vertical'}}/>
         </Field>
+
+        {!isAdmin && (
+          <button type="button" className="btn" onClick={()=>setRiengTu(v=>!v)}
+            style={{width:'100%', display:'flex', alignItems:'center', gap:10, padding:'11px 12px', borderRadius:9, background: riengTu ? '#FBEAEA' : '#F3F0EA', border: riengTu ? `1px solid ${RED}` : '1px solid transparent', marginBottom:14, textAlign:'left'}}>
+            <div style={{width:18, height:18, borderRadius:5, border: `2px solid ${riengTu ? RED : '#B8ADA0'}`, background: riengTu ? RED : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+              {riengTu && <Check size={12} color="#fff"/>}
+            </div>
+            <div>
+              <div style={{fontSize:13, fontWeight:600, color: riengTu ? RED : '#20242B'}}>Chỉ mình tôi xem</div>
+              <div style={{fontSize:11, color:'#8a8072', marginTop:1}}>Ẩn việc này khỏi màn hình Quản lý</div>
+            </div>
+          </button>
+        )}
 
         {error && <div style={{color:RED, fontSize:12.5, marginBottom:10}}>{error}</div>}
 
