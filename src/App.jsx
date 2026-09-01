@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, LogOut, PlayCircle, Archive, ArchiveRestore, Bell } from 'lucide-react';
+import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, LogOut, PlayCircle, Archive, ArchiveRestore, Bell, Table2, Calendar, Mail, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 
 // ---------- Danh mục nhóm công việc gốc (theo Dự thảo phân công 1908) ----------
 const NHOM_CV = [
@@ -32,21 +32,22 @@ const COLOR_TRANGTHAI = { 'Đã hoàn thành': '#1E7A5C', 'Đang xử lý': '#1B
 
 const ADMIN_PIN = '2026';
 
-// Mỗi nhân viên có 1 mã PIN riêng (4 số) để đăng nhập đúng tên mình.
-// Thu có thể đổi PIN bất kỳ lúc nào bằng cách sửa giá trị "pin" bên dưới.
+// Mỗi nhân viên có 1 mã PIN riêng (4 số) để đăng nhập đúng tên mình,
+// và 1 email để nhận nhắc việc qua thư điện tử.
+// Thu điền lại email thật của từng người vào đây (hiện đang là email giả để demo).
 const NHAN_SU = [
-  { name: 'ThS. Lê Thanh Tâm', pin: '1111' },
-  { name: 'ThS. Võ Tấn Cường', pin: '2222' },
-  { name: 'BS. Dương Thị Anh Thư', pin: '3333' },
-  { name: 'ThS. Lê Huyền Trân', pin: '4444' },
-  { name: 'ĐD.CKI. Nguyễn Thị Ngọc Bảo', pin: '5555' },
-  { name: 'BS. Nguyễn Minh Nhựt', pin: '6666' },
-  { name: 'CN. Nguyễn Ngọc Thơ', pin: '7777' },
-  { name: 'CN. Trần Thị Huệ', pin: '8888' },
-  { name: 'BSCKI. Kim Ngọc Khánh Vinh', pin: '9999' },
-  { name: 'BSCKI. Lại Khôi Nguyên', pin: '1212' },
-  { name: 'ThS. Nguyễn Quang Đạt', pin: '3434' },
-  { name: 'CN. Nguyễn Quách Ngọc Trâm', pin: '5656' },
+  { name: 'ThS. Lê Thanh Tâm', pin: '1111', email: 'lttam.bv@ctump.edu.vn' },
+  { name: 'ThS. Võ Tấn Cường', pin: '2222', email: 'vtcuong.bv@ctump.edu.vn' },
+  { name: 'BS. Dương Thị Anh Thư', pin: '3333', email: 'dtathu.bv@ctump.edu.vn' },
+  { name: 'ThS. Lê Huyền Trân', pin: '4444', email: 'lhtran.bv@ctump.edu.vn' },
+  { name: 'ĐD.CKI. Nguyễn Thị Ngọc Bảo', pin: '5555', email: 'ntnbao.bv@ctump.edu.vn' },
+  { name: 'BS. Nguyễn Minh Nhựt', pin: '6666', email: 'nmnhut.bv@ctump.edu.vn' },
+  { name: 'CN. Nguyễn Ngọc Thơ', pin: '7777', email: 'nntho.bv@ctump.edu.vn' },
+  { name: 'CN. Trần Thị Huệ', pin: '8888', email: 'tthue.bv@ctump.edu.vn' },
+  { name: 'BSCKI. Kim Ngọc Khánh Vinh', pin: '9999', email: 'knkvinh.bv@ctump.edu.vn' },
+  { name: 'BSCKI. Lại Khôi Nguyên', pin: '1212', email: 'lknguyen.bv@ctump.edu.vn' },
+  { name: 'ThS. Nguyễn Quang Đạt', pin: '3434', email: 'nqdat.bv@ctump.edu.vn' },
+  { name: 'CN. Nguyễn Quách Ngọc Trâm', pin: '5656', email: 'nqntram.bv@ctump.edu.vn' },
 ];
 const NHAN_SU_NAMES = NHAN_SU.map(n => n.name);
 
@@ -90,6 +91,8 @@ function setLastSeen(staffName, iso) {
 
 import { db } from './firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import emailjs from '@emailjs/browser';
+import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from './emailjs';
 
 // Lưu & đồng bộ dữ liệu qua Firebase Firestore (thay cho window.storage của Claude)
 // Mọi người mở cùng link sẽ thấy dữ liệu cập nhật theo thời gian thực.
@@ -106,6 +109,26 @@ async function saveTasks(tasks) {
   catch (e) { console.error('save failed', e); }
 }
 
+// Gửi email nhắc việc qua EmailJS. Trả về true/false để báo thành công/thất bại.
+async function sendReminderEmail(task) {
+  const person = NHAN_SU.find(n => n.name === task.phuTrach);
+  if (!person || !person.email) return { ok: false, reason: 'Không tìm thấy email người phụ trách' };
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: person.email,
+      to_name: person.name,
+      task_name: task.ten,
+      deadline: task.hanHoanThanh,
+      priority: task.uuTien,
+    }, { publicKey: EMAILJS_PUBLIC_KEY });
+    return { ok: true };
+  } catch (e) {
+    console.error('Gửi email thất bại:', e);
+    return { ok: false, reason: 'Gửi email thất bại, kiểm tra lại cấu hình EmailJS' };
+  }
+}
+
+
 export default function App() {
   const [tasks, setTasks] = useState(null);
   const [role, setRole] = useState(null);
@@ -120,6 +143,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [viewMode, setViewMode] = useState('board'); // 'board' | 'table' | 'calendar'
+  const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [emailSending, setEmailSending] = useState(null); // id của task đang gửi email
   const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
@@ -144,8 +171,15 @@ export default function App() {
       showToast('Đã cập nhật công việc');
     } else {
       const taoBoi = isAdmin ? 'admin' : staffName;
-      next = [...tasks, { ...task, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi, createdAt: nowISO() }];
+      const newTask = { ...task, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi, createdAt: nowISO() };
+      next = [...tasks, newTask];
       showToast(isAdmin ? 'Đã giao việc mới' : 'Đã thêm việc');
+      // Tự động gửi email nhắc việc ngay khi Quản lý giao việc mới cho nhân viên
+      if (isAdmin) {
+        sendReminderEmail(newTask).then(result => {
+          if (result.ok) showToast(`Đã gửi email báo việc mới tới ${newTask.phuTrach}`);
+        });
+      }
     }
     persist(next);
     setShowForm(false);
@@ -173,6 +207,13 @@ export default function App() {
       return { ...t, ...patch };
     }));
     showToast(trangThai === 'Đang xử lý' ? 'Đã bắt đầu công việc' : trangThai === 'Đã hoàn thành' ? 'Đã hoàn thành công việc' : 'Đã cập nhật trạng thái');
+  };
+
+  const handleSendReminder = async (task) => {
+    setEmailSending(task.id);
+    const result = await sendReminderEmail(task);
+    setEmailSending(null);
+    showToast(result.ok ? `Đã gửi nhắc việc qua email tới ${task.phuTrach}` : result.reason);
   };
 
   const phuTrachList = useMemo(() => {
@@ -428,19 +469,51 @@ export default function App() {
           </div>
         </div>
 
+        {/* Chuyển chế độ xem: chỉ Quản lý mới có Bảng & Lịch */}
+        {isAdmin && !showArchive && (
+          <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content'}}>
+            <button className="btn" onClick={()=>setViewMode('board')}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: viewMode==='board' ? '#fff' : 'transparent', color: viewMode==='board' ? NAVY : '#8a8072', boxShadow: viewMode==='board' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <LayoutGrid size={14}/> Bảng công việc
+            </button>
+            <button className="btn" onClick={()=>setViewMode('table')}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: viewMode==='table' ? '#fff' : 'transparent', color: viewMode==='table' ? NAVY : '#8a8072', boxShadow: viewMode==='table' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <Table2 size={14}/> Bảng tổng hợp
+            </button>
+            <button className="btn" onClick={()=>setViewMode('calendar')}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: viewMode==='calendar' ? '#fff' : 'transparent', color: viewMode==='calendar' ? NAVY : '#8a8072', boxShadow: viewMode==='calendar' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <Calendar size={14}/> Lịch
+            </button>
+          </div>
+        )}
+
         {/* Task lists */}
         {showArchive ? (
           <ArchiveList tasks={filtered} isAdmin={isAdmin} staffName={staffName} onDelete={deleteTask}/>
+        ) : isAdmin && viewMode === 'table' ? (
+          <TaskTable tasks={filtered} onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
+            onSendReminder={handleSendReminder} emailSending={emailSending}/>
+        ) : isAdmin && viewMode === 'calendar' ? (
+          <TaskCalendar tasks={filtered} month={calendarMonth} onMonthChange={setCalendarMonth}
+            selectedDay={selectedDay} onSelectDay={setSelectedDay}
+            onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
+            onSendReminder={handleSendReminder} emailSending={emailSending}/>
         ) : (
           <div style={{display:'flex', flexDirection:'column', gap:14}}>
             <TaskColumn title="Chưa bắt đầu" color="#9AA5B1" bg="#F1F0EB" tasks={filtered.filter(t=>t.trangThai==='Chưa bắt đầu')}
               isAdmin={isAdmin} staffName={staffName} onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
-              onAdvance={(id)=>setStatus(id,'Đang xử lý')} advanceLabel="Bắt đầu" advanceIcon={<PlayCircle size={14}/>}/>
+              onAdvance={(id)=>setStatus(id,'Đang xử lý')} advanceLabel="Bắt đầu" advanceIcon={<PlayCircle size={14}/>}
+              onSendReminder={handleSendReminder} emailSending={emailSending}/>
             <TaskColumn title="Đang xử lý" color="#1B6FA8" bg="#EAF2F7" tasks={filtered.filter(t=>t.trangThai==='Đang xử lý')}
               isAdmin={isAdmin} staffName={staffName} onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
-              onAdvance={(id)=>setStatus(id,'Đã hoàn thành')} advanceLabel="Hoàn thành" advanceIcon={<Check size={14}/>}/>
+              onAdvance={(id)=>setStatus(id,'Đã hoàn thành')} advanceLabel="Hoàn thành" advanceIcon={<Check size={14}/>}
+              onSendReminder={handleSendReminder} emailSending={emailSending}/>
             <TaskColumn title="Đã hoàn thành" color="#1E7A5C" bg="#E9F3EE" tasks={filtered.filter(t=>t.trangThai==='Đã hoàn thành')}
-              isAdmin={isAdmin} staffName={staffName} onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}/>
+              isAdmin={isAdmin} staffName={staffName} onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
+              onSendReminder={handleSendReminder} emailSending={emailSending}/>
           </div>
         )}
       </div>
@@ -672,7 +745,191 @@ function SelectBox({ value, onChange, options, getLabel, getValue, minWidth }) {
   );
 }
 
-function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDelete, onAdvance, advanceLabel, advanceIcon }) {
+function TaskTable({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
+  return (
+    <div className="card" style={{overflowX:'auto'}}>
+      {tasks.length === 0 ? (
+        <div style={{padding:'24px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào</div>
+      ) : (
+        <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
+          <thead>
+            <tr style={{background:'#F1F0EB'}}>
+              <th style={thStyle}>STT</th>
+              <th style={{...thStyle, textAlign:'left', minWidth:180}}>Tên công việc</th>
+              <th style={thStyle}>Nhóm</th>
+              <th style={thStyle}>Người phụ trách</th>
+              <th style={thStyle}>Ưu tiên</th>
+              <th style={thStyle}>Hạn</th>
+              <th style={thStyle}>Trạng thái</th>
+              <th style={thStyle}>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((t, i) => {
+              const dl = daysLeft(t.hanHoanThanh);
+              const overdue = t.trangThai !== 'Đã hoàn thành' && dl < 0;
+              const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
+              return (
+                <tr key={t.id} style={{borderTop:'1px solid #F0EDE3'}}>
+                  <td style={tdStyle}>{i+1}</td>
+                  <td style={{...tdStyle, textAlign:'left', fontWeight:600}}>
+                    {t.ten}
+                    {selfCreated && <span style={{marginLeft:6, fontSize:9.5, padding:'1px 6px', borderRadius:20, background:'#EDE7DA', color:'#8a7350', fontWeight:600}}>Tự thêm</span>}
+                    {t.riengTu && <span style={{marginLeft:6, fontSize:9.5, padding:'1px 6px', borderRadius:20, background:'#FBEAEA', color:RED, fontWeight:600}}>Riêng tư</span>}
+                  </td>
+                  <td style={tdStyle}>{t.nhom}</td>
+                  <td style={tdStyle}>{t.phuTrach}</td>
+                  <td style={tdStyle}>
+                    <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background: COLOR_UUTIEN[t.uuTien]+'20', color:COLOR_UUTIEN[t.uuTien], fontWeight:600}}>{t.uuTien}</span>
+                  </td>
+                  <td style={{...tdStyle, color: overdue ? RED : '#20242B', fontWeight: overdue ? 700 : 400}}>{t.hanHoanThanh}</td>
+                  <td style={tdStyle}>
+                    <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background: COLOR_TRANGTHAI[t.trangThai]+'30', color:'#20242B', fontWeight:600}}>{t.trangThai}</span>
+                  </td>
+                  <td style={tdStyle}>
+                    <div style={{display:'flex', gap:5, justifyContent:'center'}}>
+                      {!selfCreated && onSendReminder && (
+                        <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
+                          style={{background:'#F3F0EA', color:'#1B6FA8', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                          <Mail size={11}/>
+                        </button>
+                      )}
+                      <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
+                        style={{background:'#F3F0EA', color:'#6b6258', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        <Pencil size={11}/>
+                      </button>
+                      <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
+                        style={{background:'#F3F0EA', color:RED, width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        <Trash2 size={11}/>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+const thStyle = { padding:'9px 10px', fontSize:11, fontWeight:700, color:'#6b6258', textAlign:'center', whiteSpace:'nowrap' };
+const tdStyle = { padding:'9px 10px', fontSize:12, color:'#20242B', textAlign:'center' };
+
+function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, onEdit, onDelete, onSendReminder, emailSending }) {
+  const year = month.getFullYear();
+  const monthIdx = month.getMonth();
+  const firstDay = new Date(year, monthIdx, 1);
+  const startWeekday = (firstDay.getDay() + 6) % 7; // Thứ 2 = 0
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  const tasksByDay = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => {
+      if (!t.hanHoanThanh) return;
+      const d = t.hanHoanThanh;
+      if (!d.startsWith(`${year}-${String(monthIdx+1).padStart(2,'0')}`)) return;
+      if (!map[d]) map[d] = [];
+      map[d].push(t);
+    });
+    return map;
+  }, [tasks, year, monthIdx]);
+
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const todayStr = todayISO();
+  const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+  const selectedTasks = selectedDay ? (tasksByDay[selectedDay] || []) : [];
+
+  return (
+    <div>
+      <div className="card" style={{padding:14, marginBottom:14}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
+          <button className="btn" onClick={()=>{ const d = new Date(month); d.setMonth(d.getMonth()-1); onMonthChange(d); onSelectDay(null); }}
+            style={{width:28, height:28, borderRadius:8, background:'#F3F0EA', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <ChevronLeft size={15}/>
+          </button>
+          <div style={{fontSize:14, fontWeight:700, color:NAVY, textTransform:'capitalize'}}>{monthLabel}</div>
+          <button className="btn" onClick={()=>{ const d = new Date(month); d.setMonth(d.getMonth()+1); onMonthChange(d); onSelectDay(null); }}
+            style={{width:28, height:28, borderRadius:8, background:'#F3F0EA', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <ChevronRight size={15}/>
+          </button>
+        </div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:4, marginBottom:6}}>
+          {['T2','T3','T4','T5','T6','T7','CN'].map(d => (
+            <div key={d} style={{textAlign:'center', fontSize:10.5, fontWeight:700, color:'#A89B85'}}>{d}</div>
+          ))}
+        </div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:4}}>
+          {cells.map((d, i) => {
+            if (d === null) return <div key={i}/>;
+            const dateStr = `${year}-${String(monthIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dayTasks = tasksByDay[dateStr] || [];
+            const isToday = dateStr === todayStr;
+            const isSelected = dateStr === selectedDay;
+            const hasOverdue = dayTasks.some(t => t.trangThai !== 'Đã hoàn thành' && dateStr < todayStr);
+            return (
+              <button key={i} className="btn" onClick={()=>onSelectDay(isSelected ? null : dateStr)}
+                style={{
+                  aspectRatio:'1', borderRadius:9, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+                  background: isSelected ? NAVY : isToday ? '#EAF2F7' : 'transparent',
+                  border: isToday && !isSelected ? `1px solid ${SKY}` : '1px solid transparent',
+                }}>
+                <span style={{fontSize:12, fontWeight: isToday||isSelected ? 700 : 500, color: isSelected ? '#fff' : '#20242B'}}>{d}</span>
+                {dayTasks.length > 0 && (
+                  <span style={{width:5, height:5, borderRadius:'50%', background: isSelected ? '#fff' : hasOverdue ? RED : SKY}}/>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedDay && (
+        <div className="card" style={{overflow:'hidden'}}>
+          <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
+            Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})
+          </div>
+          {selectedTasks.length === 0 ? (
+            <div style={{padding:'16px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn ngày này</div>
+          ) : (
+            selectedTasks.map(t => {
+              const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
+              return (
+                <div key={t.id} style={{padding:'10px 14px', borderTop:'1px solid #F0EDE3', display:'flex', gap:10, alignItems:'flex-start'}}>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontSize:13, fontWeight:600, color:'#20242B'}}>{t.ten}</div>
+                    <div style={{fontSize:10.5, color:'#8a8072', marginTop:3}}>{t.phuTrach} · {t.trangThai}</div>
+                  </div>
+                  <div style={{display:'flex', gap:6, flexShrink:0}}>
+                    {!selfCreated && onSendReminder && (
+                      <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
+                        style={{background:'#F3F0EA', color:'#1B6FA8', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        <Mail size={12}/>
+                      </button>
+                    )}
+                    <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
+                      style={{background:'#F3F0EA', color:'#6b6258', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                      <Pencil size={12}/>
+                    </button>
+                    <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
+                      style={{background:'#F3F0EA', color:RED, width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                      <Trash2 size={12}/>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDelete, onAdvance, advanceLabel, advanceIcon, onSendReminder, emailSending }) {
   return (
     <div className="card" style={{overflow:'hidden'}}>
       <div style={{background:bg, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
@@ -692,6 +949,7 @@ function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDel
             const nhomTen = NHOM_CV.find(n=>n.ma===t.nhom)?.ten || '';
             const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
             const canManage = isAdmin || (staffName && t.taoBoi === staffName);
+            const canRemind = isAdmin && !selfCreated && onSendReminder;
             return (
               <div key={t.id} style={{padding:'10px 14px', borderTop:'1px solid #F0EDE3', display:'flex', gap:10, alignItems:'flex-start'}}>
                 <div style={{flex:1, minWidth:0}}>
@@ -722,6 +980,12 @@ function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDel
                     <button className="btn" onClick={()=>onAdvance(t.id)} title={advanceLabel}
                       style={{background:color, color:'#fff', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
                       {advanceIcon}
+                    </button>
+                  )}
+                  {canRemind && (
+                    <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
+                      style={{background:'#F3F0EA', color:'#1B6FA8', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', opacity: emailSending===t.id ? 0.5 : 1}}>
+                      <Mail size={12}/>
                     </button>
                   )}
                   {canManage && (
