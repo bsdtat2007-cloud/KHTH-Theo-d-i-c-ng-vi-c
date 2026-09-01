@@ -89,43 +89,22 @@ function setLastSeen(staffName, iso) {
   catch (e) { /* ignore */ }
 }
 
-import { db } from './firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import emailjs from '@emailjs/browser';
-import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from './emailjs';
-
-// Lưu & đồng bộ dữ liệu qua Firebase Firestore (thay cho window.storage của Claude)
-// Mọi người mở cùng link sẽ thấy dữ liệu cập nhật theo thời gian thực.
-const TASKS_DOC = doc(db, 'khth', 'tasks');
-
-function subscribeTasks(callback) {
-  return onSnapshot(TASKS_DOC, (snap) => {
-    if (snap.exists()) callback(snap.data().list || []);
-    else callback(null); // chưa có dữ liệu -> dùng seed
-  }, (err) => { console.error('Firestore lỗi:', err); callback(null); });
+async function loadTasks() {
+  try {
+    const res = await window.storage.get('khth:tasks', true);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) { /* not found */ }
+  return null;
 }
 async function saveTasks(tasks) {
-  try { await setDoc(TASKS_DOC, { list: tasks }); }
+  try { await window.storage.set('khth:tasks', JSON.stringify(tasks), true); }
   catch (e) { console.error('save failed', e); }
 }
 
-// Gửi email nhắc việc qua EmailJS. Trả về true/false để báo thành công/thất bại.
+// Lưu ý: gửi email nhắc việc (EmailJS) chỉ hoạt động ở bản web (Vercel) vì cần cài thêm gói riêng.
+// Trong bản xem trước này, gửi email sẽ báo lỗi nhẹ nếu bấm thử.
 async function sendReminderEmail(task) {
-  const person = NHAN_SU.find(n => n.name === task.phuTrach);
-  if (!person || !person.email) return { ok: false, reason: 'Không tìm thấy email người phụ trách' };
-  try {
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      to_email: person.email,
-      to_name: person.name,
-      task_name: task.ten,
-      deadline: task.hanHoanThanh,
-      priority: task.uuTien,
-    }, { publicKey: EMAILJS_PUBLIC_KEY });
-    return { ok: true };
-  } catch (e) {
-    console.error('Gửi email thất bại:', e);
-    return { ok: false, reason: 'Gửi email thất bại, kiểm tra lại cấu hình EmailJS' };
-  }
+  return { ok: false, reason: 'Tính năng này chỉ hoạt động trên bản web đã deploy (Vercel), không dùng được trong bản xem trước Claude.' };
 }
 
 
@@ -150,11 +129,11 @@ export default function App() {
   const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeTasks((loaded) => {
+    (async () => {
+      const loaded = await loadTasks();
       if (loaded) setTasks(loaded);
       else { setTasks(SEED_TASKS); saveTasks(SEED_TASKS); }
-    });
-    return () => unsubscribe();
+    })();
   }, []);
 
   const persist = useCallback((next) => { setTasks(next); saveTasks(next); }, []);
@@ -319,6 +298,13 @@ export default function App() {
         ::-webkit-scrollbar-thumb { background:#D7D2C4; border-radius:4px; }
         @keyframes slideUp { from { opacity:0; transform:translateY(12px);} to {opacity:1; transform:translateY(0);} }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .khth-sidebar { width:176px; }
+        .khth-sidebar-label { display:inline; }
+        @media (max-width: 620px) {
+          .khth-sidebar { width:52px; }
+          .khth-sidebar-label { display:none; }
+          .khth-sidebar-btn { justify-content:center !important; padding:10px 6px !important; }
+        }
       `}</style>
 
       {/* Header */}
@@ -373,21 +359,36 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{padding:'18px 16px', maxWidth:920, margin:'0 auto'}}>
+      <div style={{padding:'18px 16px', maxWidth: isAdmin ? 1080 : 920, margin:'0 auto', display:'flex', gap:16, alignItems:'flex-start'}}>
 
-        {/* Tabs: Đang hoạt động / Lưu trữ */}
-        <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content'}}>
-          <button className="btn" onClick={()=>setShowArchive(false)}
-            style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-              background: !showArchive ? '#fff' : 'transparent', color: !showArchive ? NAVY : '#8a8072', boxShadow: !showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-            <ListTodo size={14}/> Đang hoạt động
-          </button>
-          <button className="btn" onClick={()=>setShowArchive(true)}
-            style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-              background: showArchive ? '#fff' : 'transparent', color: showArchive ? NAVY : '#8a8072', boxShadow: showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-            <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>!staffName || t.phuTrach===staffName).length})
-          </button>
-        </div>
+        {isAdmin && (
+          <AdminSidebar
+            current={showArchive ? 'archive' : viewMode}
+            archiveCount={archivedTasks.length}
+            onSelect={(key) => {
+              if (key === 'archive') { setShowArchive(true); }
+              else { setShowArchive(false); setViewMode(key); }
+            }}
+          />
+        )}
+
+        <div style={{flex:1, minWidth:0}}>
+
+        {/* Tabs: Đang hoạt động / Lưu trữ — chỉ hiện cho nhân viên, Quản lý dùng thanh dọc bên trái */}
+        {!isAdmin && (
+          <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content'}}>
+            <button className="btn" onClick={()=>setShowArchive(false)}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: !showArchive ? '#fff' : 'transparent', color: !showArchive ? NAVY : '#8a8072', boxShadow: !showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <ListTodo size={14}/> Đang hoạt động
+            </button>
+            <button className="btn" onClick={()=>setShowArchive(true)}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: showArchive ? '#fff' : 'transparent', color: showArchive ? NAVY : '#8a8072', boxShadow: showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>!staffName || t.phuTrach===staffName).length})
+            </button>
+          </div>
+        )}
 
         {showArchive && (
           <div style={{background:'#EEF3F0', color:'#1E7A5C', fontSize:12, padding:'9px 12px', borderRadius:9, marginBottom:16, lineHeight:1.4}}>
@@ -469,27 +470,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Chuyển chế độ xem: chỉ Quản lý mới có Bảng & Lịch */}
-        {isAdmin && !showArchive && (
-          <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content'}}>
-            <button className="btn" onClick={()=>setViewMode('board')}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: viewMode==='board' ? '#fff' : 'transparent', color: viewMode==='board' ? NAVY : '#8a8072', boxShadow: viewMode==='board' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-              <LayoutGrid size={14}/> Bảng công việc
-            </button>
-            <button className="btn" onClick={()=>setViewMode('table')}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: viewMode==='table' ? '#fff' : 'transparent', color: viewMode==='table' ? NAVY : '#8a8072', boxShadow: viewMode==='table' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-              <Table2 size={14}/> Bảng tổng hợp
-            </button>
-            <button className="btn" onClick={()=>setViewMode('calendar')}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: viewMode==='calendar' ? '#fff' : 'transparent', color: viewMode==='calendar' ? NAVY : '#8a8072', boxShadow: viewMode==='calendar' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-              <Calendar size={14}/> Lịch
-            </button>
-          </div>
-        )}
-
         {/* Task lists */}
         {showArchive ? (
           <ArchiveList tasks={filtered} isAdmin={isAdmin} staffName={staffName} onDelete={deleteTask}/>
@@ -516,6 +496,7 @@ export default function App() {
               onSendReminder={handleSendReminder} emailSending={emailSending}/>
           </div>
         )}
+        </div>
       </div>
 
       {showForm && (isAdmin || staffName) && (
@@ -721,6 +702,26 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
   );
 }
 
+function AdminSidebar({ current, archiveCount, onSelect }) {
+  const items = [
+    { key: 'board', icon: <LayoutGrid size={16}/>, label: 'Bảng công việc' },
+    { key: 'table', icon: <Table2 size={16}/>, label: 'Bảng tổng hợp' },
+    { key: 'calendar', icon: <Calendar size={16}/>, label: 'Lịch' },
+    { key: 'archive', icon: <Archive size={16}/>, label: `Lưu trữ (${archiveCount})` },
+  ];
+  return (
+    <div className="card khth-sidebar" style={{padding:8, flexShrink:0, display:'flex', flexDirection:'column', gap:4, position:'sticky', top:100}}>
+      {items.map(it => (
+        <button key={it.key} className="btn khth-sidebar-btn" onClick={()=>onSelect(it.key)}
+          style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:9, fontSize:12.5, fontWeight:600, textAlign:'left',
+            background: current===it.key ? NAVY : 'transparent', color: current===it.key ? '#fff' : '#20242B'}}>
+          {it.icon}<span className="khth-sidebar-label">{it.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function StatChip({ icon, label, value, color }) {
   return (
     <div className="card" style={{padding:'10px 14px', display:'flex', alignItems:'center', gap:8, minWidth:104, flexShrink:0}}>
@@ -842,10 +843,11 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
   const todayStr = todayISO();
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   const selectedTasks = selectedDay ? (tasksByDay[selectedDay] || []) : [];
+  const monthDates = useMemo(() => Object.keys(tasksByDay).sort(), [tasksByDay]);
 
   return (
     <div>
-      <div className="card" style={{padding:14, marginBottom:14}}>
+      <div className="card" style={{padding:14, marginBottom:14, maxWidth:400, margin:'0 auto 14px'}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
           <button className="btn" onClick={()=>{ const d = new Date(month); d.setMonth(d.getMonth()-1); onMonthChange(d); onSelectDay(null); }}
             style={{width:28, height:28, borderRadius:8, background:'#F3F0EA', display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -857,12 +859,12 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
             <ChevronRight size={15}/>
           </button>
         </div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:4, marginBottom:6}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:3, marginBottom:6}}>
           {['T2','T3','T4','T5','T6','T7','CN'].map(d => (
-            <div key={d} style={{textAlign:'center', fontSize:10.5, fontWeight:700, color:'#A89B85'}}>{d}</div>
+            <div key={d} style={{textAlign:'center', fontSize:10, fontWeight:700, color:'#A89B85'}}>{d}</div>
           ))}
         </div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:4}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:3}}>
           {cells.map((d, i) => {
             if (d === null) return <div key={i}/>;
             const dateStr = `${year}-${String(monthIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -879,7 +881,12 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
                 }}>
                 <span style={{fontSize:12, fontWeight: isToday||isSelected ? 700 : 500, color: isSelected ? '#fff' : '#20242B'}}>{d}</span>
                 {dayTasks.length > 0 && (
-                  <span style={{width:5, height:5, borderRadius:'50%', background: isSelected ? '#fff' : hasOverdue ? RED : SKY}}/>
+                  <span style={{
+                    fontSize:8.5, fontWeight:700, minWidth:14, height:14, borderRadius:7, padding:'0 3px',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background: isSelected ? '#fff' : hasOverdue ? RED : SKY,
+                    color: isSelected ? (hasOverdue ? RED : SKY) : '#fff',
+                  }}>{dayTasks.length}</span>
                 )}
               </button>
             );
@@ -887,44 +894,69 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
         </div>
       </div>
 
-      {selectedDay && (
+      {selectedDay ? (
         <div className="card" style={{overflow:'hidden'}}>
-          <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
-            Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})
+          <div style={{background:'#F1F0EB', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <span style={{fontSize:12.5, fontWeight:700, color:'#20242B'}}>Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})</span>
+            <button className="btn" onClick={()=>onSelectDay(null)} style={{fontSize:11, color:'#1B6FA8', background:'transparent', padding:'2px 6px'}}>Xem cả tháng</button>
           </div>
           {selectedTasks.length === 0 ? (
             <div style={{padding:'16px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn ngày này</div>
           ) : (
-            selectedTasks.map(t => {
-              const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
+            selectedTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)
+          )}
+        </div>
+      ) : (
+        <div className="card" style={{overflow:'hidden'}}>
+          <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
+            Danh sách công việc trong tháng ({tasks.length})
+          </div>
+          {monthDates.length === 0 ? (
+            <div style={{padding:'20px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn trong tháng này</div>
+          ) : (
+            monthDates.map(dateStr => {
+              const dayTasks = tasksByDay[dateStr] || [];
+              const isOverdueDay = dateStr < todayStr;
               return (
-                <div key={t.id} style={{padding:'10px 14px', borderTop:'1px solid #F0EDE3', display:'flex', gap:10, alignItems:'flex-start'}}>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div style={{fontSize:13, fontWeight:600, color:'#20242B'}}>{t.ten}</div>
-                    <div style={{fontSize:10.5, color:'#8a8072', marginTop:3}}>{t.phuTrach} · {t.trangThai}</div>
+                <div key={dateStr}>
+                  <div style={{padding:'7px 14px', background:'#FAF9F5', fontSize:11, fontWeight:700, color: isOverdueDay ? RED : '#6b6258', borderTop:'1px solid #F0EDE3'}}>
+                    {dateStr.split('-').reverse().join('/')}
                   </div>
-                  <div style={{display:'flex', gap:6, flexShrink:0}}>
-                    {!selfCreated && onSendReminder && (
-                      <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
-                        style={{background:'#F3F0EA', color:'#1B6FA8', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                        <Mail size={12}/>
-                      </button>
-                    )}
-                    <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
-                      style={{background:'#F3F0EA', color:'#6b6258', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                      <Pencil size={12}/>
-                    </button>
-                    <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
-                      style={{background:'#F3F0EA', color:RED, width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                      <Trash2 size={12}/>
-                    </button>
-                  </div>
+                  {dayTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)}
                 </div>
               );
             })
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function CalendarTaskRow({ t, onEdit, onDelete, onSendReminder, emailSending }) {
+  const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
+  return (
+    <div style={{padding:'10px 14px', borderTop:'1px solid #F0EDE3', display:'flex', gap:10, alignItems:'flex-start'}}>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontSize:13, fontWeight:600, color:'#20242B'}}>{t.ten}</div>
+        <div style={{fontSize:10.5, color:'#8a8072', marginTop:3}}>{t.phuTrach} · {t.trangThai}</div>
+      </div>
+      <div style={{display:'flex', gap:6, flexShrink:0}}>
+        {!selfCreated && onSendReminder && (
+          <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
+            style={{background:'#F3F0EA', color:'#1B6FA8', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <Mail size={12}/>
+          </button>
+        )}
+        <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
+          style={{background:'#F3F0EA', color:'#6b6258', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <Pencil size={12}/>
+        </button>
+        <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
+          style={{background:'#F3F0EA', color:RED, width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <Trash2 size={12}/>
+        </button>
+      </div>
     </div>
   );
 }
