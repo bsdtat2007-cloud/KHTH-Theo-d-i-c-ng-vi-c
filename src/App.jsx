@@ -356,6 +356,10 @@ export default function App() {
           .khth-sidebar-label { display:none; }
           .khth-sidebar-btn { justify-content:center !important; padding:10px 6px !important; }
         }
+        @media (max-width: 720px) {
+          .khth-calendar-wrap { flex-direction:column !important; }
+          .khth-calendar-left { width:100% !important; max-width:400px; margin:0 auto; }
+        }
       `}</style>
 
       {/* Header */}
@@ -836,10 +840,13 @@ function SelectBox({ value, onChange, options, getLabel, getValue, minWidth }) {
   );
 }
 
+const TRANG_THAI_ORDER = { 'Chưa bắt đầu': 0, 'Đang xử lý': 1, 'Đã hoàn thành': 2 };
+
 function TaskTable({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
+  const sortedTasks = [...tasks].sort((a, b) => (TRANG_THAI_ORDER[a.trangThai] ?? 9) - (TRANG_THAI_ORDER[b.trangThai] ?? 9));
   return (
     <div className="card" style={{overflowX:'auto'}}>
-      {tasks.length === 0 ? (
+      {sortedTasks.length === 0 ? (
         <div style={{padding:'24px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào</div>
       ) : (
         <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
@@ -856,7 +863,7 @@ function TaskTable({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
             </tr>
           </thead>
           <tbody>
-            {tasks.map((t, i) => {
+            {sortedTasks.map((t, i) => {
               const dl = daysLeft(t.hanHoanThanh);
               const overdue = t.trangThai !== 'Đã hoàn thành' && dl < 0;
               const selfCreated = t.taoBoi && t.taoBoi !== 'admin';
@@ -936,8 +943,8 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
   const monthDates = useMemo(() => Object.keys(tasksByDay).sort(), [tasksByDay]);
 
   return (
-    <div>
-      <div className="card" style={{padding:14, marginBottom:14, maxWidth:400, margin:'0 auto 14px'}}>
+    <div className="khth-calendar-wrap" style={{display:'flex', gap:14, alignItems:'flex-start'}}>
+      <div className="card khth-calendar-left" style={{padding:14, width:320, flexShrink:0}}>
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
           <button className="btn" onClick={()=>{ const d = new Date(month); d.setMonth(d.getMonth()-1); onMonthChange(d); onSelectDay(null); }}
             style={{width:28, height:28, borderRadius:8, background:'#F3F0EA', display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -972,53 +979,57 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
                 <span style={{fontSize:12, fontWeight: isToday||isSelected ? 700 : 500, color: isSelected ? '#fff' : '#20242B'}}>{d}</span>
                 {dayTasks.length > 0 && (
                   <span style={{
-                    fontSize:8.5, fontWeight:700, minWidth:14, height:14, borderRadius:7, padding:'0 3px',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    background: isSelected ? '#fff' : hasOverdue ? RED : SKY,
-                    color: isSelected ? (hasOverdue ? RED : SKY) : '#fff',
-                  }}>{dayTasks.length}</span>
+                    fontSize:11, fontWeight:800, lineHeight:1,
+                    color: isSelected ? '#fff' : hasOverdue ? RED : SKY,
+                  }}>{hasOverdue ? '−' : '+'}</span>
                 )}
               </button>
             );
           })}
         </div>
+        <div style={{display:'flex', gap:14, justifyContent:'center', marginTop:10, fontSize:10.5, color:'#8a8072'}}>
+          <span style={{color:SKY, fontWeight:800}}>+</span>&nbsp;Có việc đến hạn
+          <span style={{color:RED, fontWeight:800, marginLeft:6}}>−</span>&nbsp;Có việc trễ hạn
+        </div>
       </div>
 
-      {selectedDay ? (
-        <div className="card" style={{overflow:'hidden'}}>
-          <div style={{background:'#F1F0EB', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-            <span style={{fontSize:12.5, fontWeight:700, color:'#20242B'}}>Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})</span>
-            <button className="btn" onClick={()=>onSelectDay(null)} style={{fontSize:11, color:'#1B6FA8', background:'transparent', padding:'2px 6px'}}>Xem cả tháng</button>
+      <div className="khth-calendar-right" style={{flex:1, minWidth:0}}>
+        {selectedDay ? (
+          <div className="card" style={{overflow:'hidden'}}>
+            <div style={{background:'#F1F0EB', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+              <span style={{fontSize:12.5, fontWeight:700, color:'#20242B'}}>Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})</span>
+              <button className="btn" onClick={()=>onSelectDay(null)} style={{fontSize:11, color:'#1B6FA8', background:'transparent', padding:'2px 6px'}}>Xem cả tháng</button>
+            </div>
+            {selectedTasks.length === 0 ? (
+              <div style={{padding:'16px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn ngày này</div>
+            ) : (
+              selectedTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)
+            )}
           </div>
-          {selectedTasks.length === 0 ? (
-            <div style={{padding:'16px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn ngày này</div>
-          ) : (
-            selectedTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)
-          )}
-        </div>
-      ) : (
-        <div className="card" style={{overflow:'hidden'}}>
-          <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
-            Danh sách công việc trong tháng ({tasks.length})
-          </div>
-          {monthDates.length === 0 ? (
-            <div style={{padding:'20px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn trong tháng này</div>
-          ) : (
-            monthDates.map(dateStr => {
-              const dayTasks = tasksByDay[dateStr] || [];
-              const isOverdueDay = dateStr < todayStr;
-              return (
-                <div key={dateStr}>
-                  <div style={{padding:'7px 14px', background:'#FAF9F5', fontSize:11, fontWeight:700, color: isOverdueDay ? RED : '#6b6258', borderTop:'1px solid #F0EDE3'}}>
-                    {dateStr.split('-').reverse().join('/')}
+        ) : (
+          <div className="card" style={{overflow:'hidden'}}>
+            <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
+              Danh sách công việc trong tháng ({tasks.length})
+            </div>
+            {monthDates.length === 0 ? (
+              <div style={{padding:'20px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào đến hạn trong tháng này</div>
+            ) : (
+              monthDates.map(dateStr => {
+                const dayTasks = tasksByDay[dateStr] || [];
+                const isOverdueDay = dateStr < todayStr;
+                return (
+                  <div key={dateStr}>
+                    <div style={{padding:'7px 14px', background:'#FAF9F5', fontSize:11, fontWeight:700, color: isOverdueDay ? RED : '#6b6258', borderTop:'1px solid #F0EDE3'}}>
+                      {dateStr.split('-').reverse().join('/')}
+                    </div>
+                    {dayTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)}
                   </div>
-                  {dayTasks.map(t => <CalendarTaskRow key={t.id} t={t} onEdit={onEdit} onDelete={onDelete} onSendReminder={onSendReminder} emailSending={emailSending}/>)}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
