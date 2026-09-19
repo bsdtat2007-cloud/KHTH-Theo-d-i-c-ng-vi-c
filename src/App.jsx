@@ -13,6 +13,7 @@ const NHOM_CV = [
   { ma: '06', ten: 'Nghiên cứu khoa học – Thử nghiệm lâm sàng – Đạo đức nghiên cứu' },
   { ma: '07', ten: 'Hợp tác – Hội nghị – Hội thảo' },
   { ma: '08', ten: 'Chuyển đổi số – Các mô hình chuyên môn mới' },
+  { ma: '09', ten: 'Quy trình quản lý nội bộ' },
 ];
 
 // ---------- Danh mục 41 công việc cụ thể (theo Dự thảo phân công 1908) ----------
@@ -248,6 +249,7 @@ export default function App() {
   const [staffPins, setStaffPins] = useState({}); // PIN nhân viên đã tự đổi (ghi đè mặc định)
   const [showChangePin, setShowChangePin] = useState(false);
   const [staffShowCatalog, setStaffShowCatalog] = useState(false); // nhân viên xem Danh mục công việc (chỉ đọc)
+  const [staffShowQuyTrinh, setStaffShowQuyTrinh] = useState(false); // nhân viên xem Quy trình quản lý nội bộ (toàn phòng + của mình)
   const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
@@ -403,6 +405,12 @@ export default function App() {
     // Quản lý không thấy việc "riêng tư" hoặc việc đang "Chờ giao việc" (xem ở mục riêng) trong các bảng thông thường
     return pool.filter(t => !t.riengTu && !t.choGiaoViec);
   }, [activeTasks, archivedTasks, staffName, showArchive]);
+
+  // Quy trình quản lý nội bộ (nhóm 09): nhân viên xem được của TOÀN phòng để nắm tiến độ, không chỉ việc của riêng mình
+  const quyTrinhTasks = useMemo(() => {
+    if (!tasks) return [];
+    return tasks.filter(t => t.nhom === '09' && !t.riengTu && !t.choGiaoViec);
+  }, [tasks]);
 
   const filtered = useMemo(() => {
     return visibleTasks.filter(t => {
@@ -613,28 +621,35 @@ export default function App() {
 
         <div style={{flex:1, minWidth:0}}>
 
-        {/* Tabs: Đang hoạt động / Lưu trữ / DM công việc P.KHTH — chỉ hiện cho nhân viên, Quản lý dùng thanh dọc bên trái */}
+        {/* Tabs: Đang hoạt động / Lưu trữ / DM công việc P.KHTH / Quy trình quản lý nội bộ — chỉ hiện cho nhân viên, Quản lý dùng thanh dọc bên trái */}
         {!isAdmin && (
           <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content', flexWrap:'wrap'}}>
-            <button className="btn" onClick={()=>{setShowArchive(false); setStaffShowCatalog(false);}}
+            <button className="btn" onClick={()=>{setShowArchive(false); setStaffShowCatalog(false); setStaffShowQuyTrinh(false);}}
               style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: (!showArchive && !staffShowCatalog) ? '#fff' : 'transparent', color: (!showArchive && !staffShowCatalog) ? NAVY : '#8a8072', boxShadow: (!showArchive && !staffShowCatalog) ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+                background: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '#fff' : 'transparent', color: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? NAVY : '#8a8072', boxShadow: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
               <ListTodo size={14}/> Đang hoạt động
             </button>
-            <button className="btn" onClick={()=>{setShowArchive(true); setStaffShowCatalog(false);}}
+            <button className="btn" onClick={()=>{setShowArchive(true); setStaffShowCatalog(false); setStaffShowQuyTrinh(false);}}
               style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
                 background: showArchive ? '#fff' : 'transparent', color: showArchive ? NAVY : '#8a8072', boxShadow: showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
               <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>!staffName || t.phuTrach===staffName).length})
             </button>
-            <button className="btn" onClick={()=>setStaffShowCatalog(true)}
+            <button className="btn" onClick={()=>{setStaffShowCatalog(true); setStaffShowQuyTrinh(false);}}
               style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
                 background: staffShowCatalog ? '#fff' : 'transparent', color: staffShowCatalog ? NAVY : '#8a8072', boxShadow: staffShowCatalog ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
               <ClipboardList size={14}/> DM công việc P.KHTH
             </button>
+            <button className="btn" onClick={()=>{setStaffShowQuyTrinh(true); setStaffShowCatalog(false);}}
+              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
+                background: staffShowQuyTrinh ? '#fff' : 'transparent', color: staffShowQuyTrinh ? NAVY : '#8a8072', boxShadow: staffShowQuyTrinh ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              <Table2 size={14}/> Quy trình quản lý nội bộ
+            </button>
           </div>
         )}
 
-        {!isAdmin && staffShowCatalog ? (
+        {!isAdmin && staffShowQuyTrinh ? (
+          <QuyTrinhView tasks={quyTrinhTasks} staffName={staffName} onAdvance={setStatus}/>
+        ) : !isAdmin && staffShowCatalog ? (
           <CatalogView catalog={catalog} isAdmin={false}/>
         ) : (
         <>
@@ -1580,6 +1595,109 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
           {initial ? 'Lưu thay đổi' : 'Thêm vào danh mục'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function QuyTrinhView({ tasks, staffName, onAdvance }) {
+  const mine = useMemo(() => tasks.filter(t => t.phuTrach === staffName), [tasks, staffName]);
+  const byPerson = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => { (map[t.phuTrach] = map[t.phuTrach] || []).push(t); });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
+  }, [tasks]);
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:22}}>
+      <div style={{background:'#EAF1F7', color:'#1B6FA8', fontSize:12, padding:'9px 12px', borderRadius:9, lineHeight:1.4}}>
+        Danh sách quy trình do Bệnh viện giao, Quản lý phân công cho từng người. Cập nhật tiến độ quy trình của bạn ở đây để Quản lý theo dõi.
+      </div>
+
+      <div>
+        <div style={{fontSize:13, fontWeight:800, color:NAVY, marginBottom:10}}>Quy trình của tôi ({mine.length})</div>
+        <QuyTrinhTable tasks={mine} staffName={staffName} onAdvance={onAdvance}/>
+      </div>
+
+      <div>
+        <div style={{fontSize:13, fontWeight:800, color:NAVY, marginBottom:10}}>Tiến độ quy trình toàn phòng ({tasks.length})</div>
+        {byPerson.length > 0 && (
+          <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:14}}>
+            {byPerson.map(([nguoi, list]) => {
+              const done = list.filter(t => t.trangThai === 'Đã hoàn thành').length;
+              const pct = list.length ? Math.round(done / list.length * 100) : 0;
+              return (
+                <div key={nguoi} style={{display:'flex', alignItems:'center', gap:10, fontSize:12.5}}>
+                  <div style={{width:130, flexShrink:0, fontWeight:600, color:'#20242B', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{nguoi}</div>
+                  <div style={{flex:1, height:8, background:'#EEEAE0', borderRadius:6, overflow:'hidden'}}>
+                    <div style={{width:`${pct}%`, height:'100%', background: pct===100 ? '#1E7A5C' : '#1B6FA8'}}/>
+                  </div>
+                  <div style={{width:76, flexShrink:0, textAlign:'right', color:'#6b6258'}}>{done}/{list.length} · {pct}%</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <QuyTrinhTable tasks={tasks} staffName={staffName} onAdvance={onAdvance}/>
+      </div>
+    </div>
+  );
+}
+
+function QuyTrinhTable({ tasks, staffName, onAdvance }) {
+  const sorted = [...tasks].sort((a, b) => (TRANG_THAI_ORDER[a.trangThai] ?? 9) - (TRANG_THAI_ORDER[b.trangThai] ?? 9));
+  return (
+    <div className="card" style={{overflowX:'auto'}}>
+      {sorted.length === 0 ? (
+        <div style={{padding:'24px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Chưa có quy trình nào</div>
+      ) : (
+        <table style={{width:'100%', borderCollapse:'collapse', minWidth:560}}>
+          <thead>
+            <tr style={{background:'#F1F0EB'}}>
+              <th style={thStyle}>STT</th>
+              <th style={{...thStyle, textAlign:'left', minWidth:200}}>Tên quy trình</th>
+              <th style={thStyle}>Người phụ trách</th>
+              <th style={thStyle}>Hạn</th>
+              <th style={thStyle}>Trạng thái</th>
+              <th style={thStyle}>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((t, i) => {
+              const dl = daysLeft(t.hanHoanThanh);
+              const overdue = t.trangThai !== 'Đã hoàn thành' && dl < 0;
+              const canAdvance = staffName && t.phuTrach === staffName && onAdvance;
+              return (
+                <tr key={t.id} style={{borderTop:'1px solid #F0EDE3'}}>
+                  <td style={tdStyle}>{i+1}</td>
+                  <td style={{...tdStyle, textAlign:'left', fontWeight:600}}>{t.ten}</td>
+                  <td style={tdStyle}>{t.phuTrach}</td>
+                  <td style={{...tdStyle, color: overdue ? RED : '#20242B', fontWeight: overdue ? 700 : 400}}>{t.hanHoanThanh}</td>
+                  <td style={tdStyle}>
+                    <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background: COLOR_TRANGTHAI[t.trangThai]+'30', color:'#20242B', fontWeight:600}}>{t.trangThai}</span>
+                  </td>
+                  <td style={tdStyle}>
+                    {canAdvance && t.trangThai === 'Chưa bắt đầu' && (
+                      <button className="btn" onClick={()=>onAdvance(t.id, 'Đang xử lý')} title="Bắt đầu"
+                        style={{background:'#1B6FA8', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
+                        <PlayCircle size={12}/>
+                      </button>
+                    )}
+                    {canAdvance && t.trangThai === 'Đang xử lý' && (
+                      <button className="btn" onClick={()=>onAdvance(t.id, 'Đã hoàn thành')} title="Hoàn thành"
+                        style={{background:'#1E7A5C', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
+                        <Check size={12}/>
+                      </button>
+                    )}
+                    {(!canAdvance || t.trangThai === 'Đã hoàn thành') && (
+                      <span style={{color:'#C9C0B0', fontSize:11}}>—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
