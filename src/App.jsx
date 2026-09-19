@@ -774,7 +774,8 @@ export default function App() {
             onDelete={deleteTask}/>
         ) : isAdmin && viewMode === 'quytrinh' ? (
           <AdminQuyTrinhView tasks={quyTrinhTasks}
-            onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}/>
+            onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
+            onSendReminder={handleSendReminder} emailSending={emailSending}/>
         ) : (
           <div style={{display:'flex', flexDirection:'column', gap:14}}>
             <TaskColumn title="Chưa bắt đầu" color="#9AA5B1" bg="#F1F0EB" tasks={filtered.filter(t=>t.trangThai==='Chưa bắt đầu')}
@@ -1633,7 +1634,7 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
   );
 }
 
-function AdminQuyTrinhView({ tasks, onEdit, onDelete }) {
+function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
   const byPerson = useMemo(() => {
     const map = {};
     tasks.forEach(t => {
@@ -1677,7 +1678,8 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete }) {
         </div>
       )}
 
-      <QuyTrinhTable tasks={tasks} isAdmin onEdit={onEdit} onDelete={onDelete}/>
+      <QuyTrinhTable tasks={tasks} isAdmin onEdit={onEdit} onDelete={onDelete}
+        onSendReminder={onSendReminder} emailSending={emailSending}/>
     </div>
   );
 }
@@ -1729,7 +1731,7 @@ function QuyTrinhView({ tasks, staffName, onAdvance }) {
   );
 }
 
-function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete }) {
+function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete, onSendReminder, emailSending }) {
   const sorted = [...tasks].sort((a, b) => (TRANG_THAI_ORDER[a.trangThai] ?? 9) - (TRANG_THAI_ORDER[b.trangThai] ?? 9));
   return (
     <div className="card" style={{overflowX:'auto'}}>
@@ -1772,6 +1774,12 @@ function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete 
                   <td style={tdStyle}>
                     {isAdmin ? (
                       <div style={{display:'flex', gap:5, justifyContent:'center'}}>
+                        {onSendReminder && (
+                          <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
+                            style={{background:'#F3F0EA', color:'#1B6FA8', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                            <Mail size={11}/>
+                          </button>
+                        )}
                         <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
                           style={{background:'#F3F0EA', color:'#6b6258', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
                           <Pencil size={11}/>
