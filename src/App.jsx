@@ -681,6 +681,9 @@ export default function App() {
           </div>
         )}
 
+        {/* Summary strip + Filters + Charts: chỉ áp dụng cho các bảng công việc thường (board/table/calendar/lưu trữ) — DM công việc, Chờ giao việc, DM Quy trình có số liệu riêng bên dưới */}
+        {(!isAdmin || showArchive || ['board','table','calendar'].includes(viewMode)) && (
+        <>
         {/* Summary strip */}
         <div style={{display:'flex', gap:10, marginBottom:16, overflowX:'auto'}}>
           <StatChip icon={<ListTodo size={15}/>} label="Tổng việc" value={stats.total} color={NAVY}/>
@@ -754,6 +757,8 @@ export default function App() {
             </div>
           </div>
         </div>
+        </>
+        )}
 
         {/* Task lists */}
         {showArchive ? (
