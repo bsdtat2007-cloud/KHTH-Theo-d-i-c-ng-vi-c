@@ -92,6 +92,7 @@ const NHAN_SU = [
   { name: 'BSCKI. Lại Khôi Nguyên', pin: '1212', email: 'lknguyen.bv@ctump.edu.vn' },
   { name: 'ThS. Nguyễn Quang Đạt', pin: '3434', email: 'nqdat.bv@ctump.edu.vn' },
   { name: 'CN. Nguyễn Quách Ngọc Trâm', pin: '5656', email: 'nqntram.bv@ctump.edu.vn' },
+  { name: 'BSCKII. Lê Thanh Vũ', pin: '7878', email: 'ltvu@ctump.edu.vn' },
 ];
 const NHAN_SU_NAMES = NHAN_SU.map(n => n.name);
 
