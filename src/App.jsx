@@ -1636,7 +1636,10 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
 function AdminQuyTrinhView({ tasks, onEdit, onDelete }) {
   const byPerson = useMemo(() => {
     const map = {};
-    tasks.forEach(t => { (map[t.phuTrach] = map[t.phuTrach] || []).push(t); });
+    tasks.forEach(t => {
+      (map[t.phuTrach] = map[t.phuTrach] || []).push(t);
+      (t.hoTro || []).forEach(nguoi => { (map[nguoi] = map[nguoi] || []).push(t); });
+    });
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
   }, [tasks]);
 
@@ -1683,7 +1686,10 @@ function QuyTrinhView({ tasks, staffName, onAdvance }) {
   const mine = useMemo(() => tasks.filter(t => t.phuTrach === staffName || (t.hoTro||[]).includes(staffName)), [tasks, staffName]);
   const byPerson = useMemo(() => {
     const map = {};
-    tasks.forEach(t => { (map[t.phuTrach] = map[t.phuTrach] || []).push(t); });
+    tasks.forEach(t => {
+      (map[t.phuTrach] = map[t.phuTrach] || []).push(t);
+      (t.hoTro || []).forEach(nguoi => { (map[nguoi] = map[nguoi] || []).push(t); });
+    });
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
   }, [tasks]);
 
