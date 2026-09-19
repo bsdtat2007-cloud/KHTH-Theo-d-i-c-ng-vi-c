@@ -415,7 +415,8 @@ export default function App() {
   }, [tasks]);
 
   const visibleTasks = useMemo(() => {
-    const pool = showArchive ? archivedTasks : activeTasks;
+    // Quy trình quản lý nội bộ (nhóm 09) tách riêng khỏi công việc thường niên — xem ở mục "Quy trình quản lý nội bộ" riêng
+    const pool = (showArchive ? archivedTasks : activeTasks).filter(t => t.nhom !== '09');
     if (staffName) return pool.filter(t => t.phuTrach === staffName);
     // Quản lý không thấy việc "riêng tư" hoặc việc đang "Chờ giao việc" (xem ở mục riêng) trong các bảng thông thường
     return pool.filter(t => !t.riengTu && !t.choGiaoViec);
@@ -631,7 +632,7 @@ export default function App() {
         {isAdmin && (
           <AdminSidebar
             current={showArchive ? 'archive' : viewMode}
-            archiveCount={archivedTasks.length}
+            archiveCount={archivedTasks.filter(t=>t.nhom!=='09').length}
             pendingCount={tasks.filter(t => t.choGiaoViec).length}
             onSelect={(key) => {
               if (key === 'archive') { setShowArchive(true); }
@@ -653,7 +654,7 @@ export default function App() {
             <button className="btn" onClick={()=>{setShowArchive(true); setStaffShowCatalog(false); setStaffShowQuyTrinh(false);}}
               style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
                 background: showArchive ? '#fff' : 'transparent', color: showArchive ? NAVY : '#8a8072', boxShadow: showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
-              <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>!staffName || t.phuTrach===staffName).length})
+              <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>t.nhom!=='09' && (!staffName || t.phuTrach===staffName)).length})
             </button>
             <button className="btn" onClick={()=>{setStaffShowCatalog(true); setStaffShowQuyTrinh(false);}}
               style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
@@ -695,7 +696,7 @@ export default function App() {
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm việc..."
               style={{width:'100%', padding:'8px 10px 8px 32px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5, background:'#fff'}}/>
           </div>
-          <SelectBox value={filterNhom} onChange={setFilterNhom} options={[{ma:'all', ten:'Tất cả nhóm'}, ...NHOM_CV]} getLabel={o=>o.ma==='all'?o.ten:`${o.ma} · ${o.ten}`} getValue={o=>o.ma} minWidth={140}/>
+          <SelectBox value={filterNhom} onChange={setFilterNhom} options={[{ma:'all', ten:'Tất cả nhóm'}, ...NHOM_CV.filter(n=>n.ma!=='09')]} getLabel={o=>o.ma==='all'?o.ten:`${o.ma} · ${o.ten}`} getValue={o=>o.ma} minWidth={140}/>
           {!staffName && (
             <SelectBox value={filterPhuTrach} onChange={setFilterPhuTrach} options={[{v:'all', l:'Tất cả người phụ trách'}, ...phuTrachList.map(p=>({v:p,l:p}))]} getLabel={o=>o.l} getValue={o=>o.v} minWidth={140}/>
           )}
