@@ -132,33 +132,51 @@ function setLastSeen(staffName, iso) {
   catch (e) { /* ignore */ }
 }
 
-// (imports thay thế bằng window.storage bên dưới)
+import { db } from './firebase';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import emailjs from '@emailjs/browser';
+import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from './emailjs';
 
-// Lưu & đồng bộ dữ liệu qua Firebase Firestore (thay cho window.storage của Claude)
+// Lưu & đồng bộ dữ liệu qua Firebase Firestore
 // Mọi người mở cùng link sẽ thấy dữ liệu cập nhật theo thời gian thực.
+const TASKS_DOC = doc(db, 'khth', 'tasks');
+
+function subscribeTasks(callback) {
+  return onSnapshot(TASKS_DOC, (snap) => {
+    if (snap.exists()) callback(snap.data().list || []);
+    else callback(null); // chưa có dữ liệu -> dùng seed
+  }, (err) => { console.error('Firestore lỗi:', err); callback(null); });
+}
 async function saveTasks(tasks) {
-  try { await window.storage.set('khth:tasks', JSON.stringify(tasks), true); }
+  try { await setDoc(TASKS_DOC, { list: tasks }); }
   catch (e) { console.error('save failed', e); }
 }
 
 // Lưu toàn bộ Danh mục công việc P.KHTH (Quản lý có thể thêm mới / sửa nội dung / sửa người phụ trách)
+const CATALOG_DOC = doc(db, 'khth', 'catalog');
+function subscribeCatalog(callback) {
+  return onSnapshot(CATALOG_DOC, (snap) => {
+    if (snap.exists()) callback(snap.data().list || []);
+    else callback(null); // chưa có dữ liệu -> dùng seed
+  }, (err) => { console.error('Firestore lỗi:', err); callback(null); });
+}
 async function saveCatalog(list) {
-  try { await window.storage.set('khth:catalog', JSON.stringify(list), true); }
+  try { await setDoc(CATALOG_DOC, { list }); }
   catch (e) { console.error('save failed', e); }
 }
 
 // Lưu mã PIN nhân viên tự đổi (ghi đè PIN mặc định trong NHAN_SU)
-async function loadStaffPinsOnce() {
-  try {
-    const res = await window.storage.get('khth:staffPins', true);
-    if (res && res.value) return JSON.parse(res.value);
-  } catch (e) { /* not found */ }
-  return {};
+const PINS_DOC = doc(db, 'khth', 'staffPins');
+function subscribeStaffPins(callback) {
+  return onSnapshot(PINS_DOC, (snap) => {
+    callback(snap.exists() ? (snap.data().map || {}) : {});
+  }, (err) => { console.error('Firestore lỗi:', err); callback({}); });
 }
 async function saveStaffPin(name, pin) {
   try {
-    const current = await loadStaffPinsOnce();
-    await window.storage.set('khth:staffPins', JSON.stringify({ ...current, [name]: pin }), true);
+    const snap = await getDoc(PINS_DOC);
+    const current = snap.exists() ? (snap.data().map || {}) : {};
+    await setDoc(PINS_DOC, { map: { ...current, [name]: pin } });
     return true;
   } catch (e) {
     console.error('save pin failed', e);
@@ -168,14 +186,40 @@ async function saveStaffPin(name, pin) {
 
 // Gửi email nhắc việc qua EmailJS. Trả về true/false để báo thành công/thất bại.
 async function sendReminderEmail(task) {
-  return { ok: false, reason: 'Tính năng này chỉ hoạt động trên bản web đã deploy (Vercel), không dùng được trong bản xem trước Claude.' };
+  const person = NHAN_SU.find(n => n.name === task.phuTrach);
+  if (!person || !person.email) return { ok: false, reason: 'Không tìm thấy email người phụ trách' };
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: person.email,
+      to_name: person.name,
+      task_name: task.ten,
+      deadline: task.hanHoanThanh,
+      priority: task.uuTien,
+    }, { publicKey: EMAILJS_PUBLIC_KEY });
+    return { ok: true };
+  } catch (e) {
+    console.error('Gửi email thất bại:', e);
+    return { ok: false, reason: 'Gửi email thất bại, kiểm tra lại cấu hình EmailJS' };
+  }
 }
 
 // Email của Quản lý — nhận thông báo khi có đề xuất "Chờ giao việc" mới
 const ADMIN_NOTIFY_EMAIL = 'ltvu@ctump.edu.vn';
 
 async function sendPendingNotificationEmail(task) {
-  return { ok: false };
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: ADMIN_NOTIFY_EMAIL,
+      to_name: 'Quản lý',
+      task_name: task.ten,
+      deadline: task.hanHoanThanh,
+      priority: task.uuTien,
+    }, { publicKey: EMAILJS_PUBLIC_KEY });
+    return { ok: true };
+  } catch (e) {
+    console.error('Gửi email thất bại:', e);
+    return { ok: false };
+  }
 }
 
 
@@ -207,27 +251,24 @@ export default function App() {
   const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const loaded = await loadTasks();
+    const unsubscribe = subscribeTasks((loaded) => {
       if (loaded) setTasks(loaded);
       else { setTasks(SEED_TASKS); saveTasks(SEED_TASKS); }
-    })();
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    (async () => {
-      const res = await window.storage.get('khth:catalog', true).catch(()=>null);
-      const loaded = res && res.value ? JSON.parse(res.value) : null;
+    const unsubscribe = subscribeCatalog((loaded) => {
       if (loaded) setCatalog(loaded);
       else { setCatalog(SEED_CATALOG); saveCatalog(SEED_CATALOG); }
-    })();
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    (async () => {
-      const loaded = await loadStaffPinsOnce();
-      setStaffPins(loaded);
-    })();
+    const unsubscribe = subscribeStaffPins((loaded) => setStaffPins(loaded));
+    return () => unsubscribe();
   }, []);
 
   const upsertCatalogItem = (item) => {
