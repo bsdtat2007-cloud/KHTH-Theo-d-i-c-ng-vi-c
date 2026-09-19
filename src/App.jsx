@@ -250,6 +250,7 @@ export default function App() {
   const [showChangePin, setShowChangePin] = useState(false);
   const [staffShowCatalog, setStaffShowCatalog] = useState(false); // nhân viên xem Danh mục công việc (chỉ đọc)
   const [staffShowQuyTrinh, setStaffShowQuyTrinh] = useState(false); // nhân viên xem Quy trình quản lý nội bộ (toàn phòng + của mình)
+  const [showBulkImport, setShowBulkImport] = useState(false); // Quản lý nhập hàng loạt nhiều việc/quy trình cùng lúc
   const [autoShown, setAutoShown] = useState(false);
 
   useEffect(() => {
@@ -350,6 +351,19 @@ export default function App() {
     persist(next);
     setShowForm(false);
     setEditingId(null);
+  };
+
+  const importTasksBulk = (items) => {
+    if (!tasks || items.length === 0) return;
+    const now = nowISO();
+    const newTasks = items.map(it => ({
+      ten: it.ten, nhom: it.nhom, phuTrach: it.phuTrach, uuTien: 'Trung bình',
+      hanHoanThanh: it.hanHoanThanh, trangThai: 'Chưa bắt đầu', ghiChu: it.ghiChu || '',
+      riengTu: false, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi: 'admin', createdAt: now,
+    }));
+    persist([...tasks, ...newTasks]);
+    setShowBulkImport(false);
+    showToast(`Đã nhập ${newTasks.length} việc/quy trình`);
   };
 
   const deleteTask = (id) => {
@@ -544,6 +558,12 @@ export default function App() {
               <button className="btn" onClick={() => { setEditingId(null); setFormDeXuat(false); setShowForm(true); }}
                 style={{display:'flex', alignItems:'center', gap:6, background:GOLD, color:NAVY_DEEP, padding:'9px 14px', borderRadius:9, fontWeight:700, fontSize:13}}>
                 <Plus size={15}/> Giao việc
+              </button>
+            )}
+            {isAdmin && (
+              <button className="btn" onClick={() => setShowBulkImport(true)} title="Nhập hàng loạt nhiều việc/quy trình cùng lúc"
+                style={{display:'flex', alignItems:'center', gap:6, background:'rgba(255,255,255,0.15)', color:'#fff', padding:'9px 12px', borderRadius:9, fontWeight:700, fontSize:12.5, border:'1px solid rgba(255,255,255,0.3)'}}>
+                <ArchiveRestore size={14}/> Nhập hàng loạt
               </button>
             )}
             {staffName && (
@@ -806,6 +826,14 @@ export default function App() {
             setLastSeen('admin', nowISO());
             setShowAdminPendingAlert(false);
           }}
+        />
+      )}
+
+      {showBulkImport && isAdmin && (
+        <BulkImportForm
+          phuTrachList={phuTrachList}
+          onCancel={() => setShowBulkImport(false)}
+          onImport={importTasksBulk}
         />
       )}
 
@@ -1930,6 +1958,76 @@ function TaskForm({ initial, prefill, phuTrachList, isAdmin, staffName, deXuatMo
         <button className="btn" onClick={submit}
           style={{width:'100%', padding:13, borderRadius:11, background:NAVY, color:'#fff', fontWeight:700, fontSize:14.5, marginTop:4}}>
           {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BulkImportForm({ phuTrachList, onCancel, onImport }) {
+  const [nhom, setNhom] = useState('09');
+  const [hanHoanThanh, setHanHoanThanh] = useState(todayISO());
+  const [text, setText] = useState('');
+  const [error, setError] = useState('');
+
+  const parsed = useMemo(() => {
+    return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+      const parts = line.split('|').map(s => s.trim());
+      const ten = parts[0] || '';
+      const phuTrach = parts[1] || '';
+      const ghiChu = parts[2] || '';
+      return { ten, phuTrach, ghiChu };
+    }).filter(it => it.ten);
+  }, [text]);
+
+  const submit = () => {
+    if (parsed.length === 0) { setError('Chưa có dòng nào hợp lệ. Mỗi dòng cần ít nhất tên việc.'); return; }
+    onImport(parsed.map(it => ({ ...it, nhom, hanHoanThanh })));
+  };
+
+  return (
+    <div style={{position:'fixed', inset:0, background:'rgba(18,37,72,0.45)', display:'flex', alignItems:'flex-end', zIndex:40, animation:'fadeIn .15s ease'}}
+      onClick={onCancel}>
+      <div onClick={e=>e.stopPropagation()} style={{background:BG, width:'100%', maxHeight:'88vh', overflowY:'auto', borderRadius:'20px 20px 0 0', padding:'18px 18px 26px', animation:'slideUp .2s ease'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
+          <h2 style={{margin:0, fontSize:17, fontWeight:800, fontFamily:'Georgia, serif', color:NAVY}}>Nhập hàng loạt</h2>
+          <button className="btn" onClick={onCancel} style={{background:'#F0EBE0', width:30, height:30, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center'}}><X size={16}/></button>
+        </div>
+
+        <div style={{background:'#EAF1F7', color:'#1B6FA8', fontSize:12, padding:'9px 12px', borderRadius:9, marginBottom:14, lineHeight:1.4}}>
+          Mỗi dòng 1 việc, theo mẫu: <strong>Tên việc | Người phụ trách | Ghi chú</strong> (2 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>). Nhóm công việc và hạn hoàn thành bên dưới áp dụng chung cho cả danh sách — sửa từng việc riêng sau khi nhập nếu cần.
+        </div>
+
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+          <Field label="Nhóm công việc (áp dụng chung)">
+            <select value={nhom} onChange={e=>setNhom(e.target.value)}
+              style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5, background:'#fff'}}>
+              {NHOM_CV.map(n => <option key={n.ma} value={n.ma}>{n.ma} · {n.ten}</option>)}
+            </select>
+          </Field>
+          <Field label="Hạn hoàn thành (áp dụng chung)">
+            <input type="date" value={hanHoanThanh} onChange={e=>setHanHoanThanh(e.target.value)}
+              style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13.5}}/>
+          </Field>
+        </div>
+
+        <Field label="Danh sách">
+          <textarea value={text} onChange={e=>{setText(e.target.value); setError('');}} rows={10}
+            placeholder={'Quy chế công tác chiến lược và phát triển Bệnh viện | ThS. Lê Thanh Tâm\nQuy định xây dựng kế hoạch hoạt động của Bệnh viện | ThS. Võ Tấn Cường | Phối hợp cùng: Trân'}
+            style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13, fontFamily:'monospace', resize:'vertical'}}/>
+        </Field>
+
+        <div style={{fontSize:11.5, color:'#8a8072', marginBottom:10}}>
+          Nhân viên hiện có: {phuTrachList.join(', ')}
+        </div>
+
+        <div style={{fontSize:12, color:'#6b6258', marginBottom:10}}>{parsed.length} việc sẽ được thêm</div>
+
+        {error && <div style={{color:RED, fontSize:12.5, marginBottom:10}}>{error}</div>}
+
+        <button className="btn" onClick={submit}
+          style={{width:'100%', padding:13, borderRadius:11, background:NAVY, color:'#fff', fontWeight:700, fontSize:14.5, marginTop:4}}>
+          Thêm {parsed.length} việc vào hệ thống
         </button>
       </div>
     </div>
