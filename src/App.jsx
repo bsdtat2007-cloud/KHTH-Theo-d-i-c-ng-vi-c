@@ -358,7 +358,7 @@ export default function App() {
     if (!tasks || items.length === 0) return;
     const now = nowISO();
     const newTasks = items.map(it => ({
-      ten: it.ten, nhom: it.nhom, phuTrach: it.phuTrach, uuTien: 'Trung bình',
+      ten: it.ten, nhom: it.nhom, phuTrach: it.phuTrach, hoTro: it.hoTro || [], uuTien: 'Trung bình',
       hanHoanThanh: it.hanHoanThanh, trangThai: 'Chưa bắt đầu', ghiChu: it.ghiChu || '',
       riengTu: false, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi: 'admin', createdAt: now,
     }));
@@ -1674,13 +1674,13 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete }) {
         </div>
       )}
 
-      <TaskTable tasks={tasks} onEdit={onEdit} onDelete={onDelete}/>
+      <QuyTrinhTable tasks={tasks} isAdmin onEdit={onEdit} onDelete={onDelete}/>
     </div>
   );
 }
 
 function QuyTrinhView({ tasks, staffName, onAdvance }) {
-  const mine = useMemo(() => tasks.filter(t => t.phuTrach === staffName), [tasks, staffName]);
+  const mine = useMemo(() => tasks.filter(t => t.phuTrach === staffName || (t.hoTro||[]).includes(staffName)), [tasks, staffName]);
   const byPerson = useMemo(() => {
     const map = {};
     tasks.forEach(t => { (map[t.phuTrach] = map[t.phuTrach] || []).push(t); });
@@ -1723,19 +1723,20 @@ function QuyTrinhView({ tasks, staffName, onAdvance }) {
   );
 }
 
-function QuyTrinhTable({ tasks, staffName, onAdvance }) {
+function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete }) {
   const sorted = [...tasks].sort((a, b) => (TRANG_THAI_ORDER[a.trangThai] ?? 9) - (TRANG_THAI_ORDER[b.trangThai] ?? 9));
   return (
     <div className="card" style={{overflowX:'auto'}}>
       {sorted.length === 0 ? (
         <div style={{padding:'24px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Chưa có quy trình nào</div>
       ) : (
-        <table style={{width:'100%', borderCollapse:'collapse', minWidth:560}}>
+        <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
           <thead>
             <tr style={{background:'#F1F0EB'}}>
               <th style={thStyle}>STT</th>
               <th style={{...thStyle, textAlign:'left', minWidth:200}}>Tên quy trình</th>
-              <th style={thStyle}>Người phụ trách</th>
+              <th style={thStyle}>Người phụ trách chính</th>
+              <th style={thStyle}>Người hỗ trợ</th>
               <th style={thStyle}>Hạn</th>
               <th style={thStyle}>Trạng thái</th>
               <th style={thStyle}>Thao tác</th>
@@ -1745,31 +1746,53 @@ function QuyTrinhTable({ tasks, staffName, onAdvance }) {
             {sorted.map((t, i) => {
               const dl = daysLeft(t.hanHoanThanh);
               const overdue = t.trangThai !== 'Đã hoàn thành' && dl < 0;
-              const canAdvance = staffName && t.phuTrach === staffName && onAdvance;
+              const hoTro = t.hoTro || [];
+              const canAdvance = staffName && (t.phuTrach === staffName || hoTro.includes(staffName)) && onAdvance;
               return (
                 <tr key={t.id} style={{borderTop:'1px solid #F0EDE3'}}>
                   <td style={tdStyle}>{i+1}</td>
-                  <td style={{...tdStyle, textAlign:'left', fontWeight:600}}>{t.ten}</td>
+                  <td style={{...tdStyle, textAlign:'left', fontWeight:600}}>
+                    {t.ten}
+                    {staffName && t.phuTrach !== staffName && hoTro.includes(staffName) && (
+                      <span style={{marginLeft:6, fontSize:9.5, padding:'1px 6px', borderRadius:20, background:'#EDE7DA', color:'#8a7350', fontWeight:600}}>Hỗ trợ</span>
+                    )}
+                  </td>
                   <td style={tdStyle}>{t.phuTrach}</td>
+                  <td style={{...tdStyle, fontSize:11, color:'#6b6258'}}>{hoTro.length ? hoTro.join(', ') : '—'}</td>
                   <td style={{...tdStyle, color: overdue ? RED : '#20242B', fontWeight: overdue ? 700 : 400}}>{t.hanHoanThanh}</td>
                   <td style={tdStyle}>
                     <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background: COLOR_TRANGTHAI[t.trangThai]+'30', color:'#20242B', fontWeight:600}}>{t.trangThai}</span>
                   </td>
                   <td style={tdStyle}>
-                    {canAdvance && t.trangThai === 'Chưa bắt đầu' && (
-                      <button className="btn" onClick={()=>onAdvance(t.id, 'Đang xử lý')} title="Bắt đầu"
-                        style={{background:'#1B6FA8', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
-                        <PlayCircle size={12}/>
-                      </button>
-                    )}
-                    {canAdvance && t.trangThai === 'Đang xử lý' && (
-                      <button className="btn" onClick={()=>onAdvance(t.id, 'Đã hoàn thành')} title="Hoàn thành"
-                        style={{background:'#1E7A5C', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
-                        <Check size={12}/>
-                      </button>
-                    )}
-                    {(!canAdvance || t.trangThai === 'Đã hoàn thành') && (
-                      <span style={{color:'#C9C0B0', fontSize:11}}>—</span>
+                    {isAdmin ? (
+                      <div style={{display:'flex', gap:5, justifyContent:'center'}}>
+                        <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
+                          style={{background:'#F3F0EA', color:'#6b6258', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                          <Pencil size={11}/>
+                        </button>
+                        <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
+                          style={{background:'#F3F0EA', color:RED, width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                          <Trash2 size={11}/>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {canAdvance && t.trangThai === 'Chưa bắt đầu' && (
+                          <button className="btn" onClick={()=>onAdvance(t.id, 'Đang xử lý')} title="Bắt đầu"
+                            style={{background:'#1B6FA8', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
+                            <PlayCircle size={12}/>
+                          </button>
+                        )}
+                        {canAdvance && t.trangThai === 'Đang xử lý' && (
+                          <button className="btn" onClick={()=>onAdvance(t.id, 'Đã hoàn thành')} title="Hoàn thành"
+                            style={{background:'#1E7A5C', color:'#fff', width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'}}>
+                            <Check size={12}/>
+                          </button>
+                        )}
+                        {(!canAdvance || t.trangThai === 'Đã hoàn thành') && (
+                          <span style={{color:'#C9C0B0', fontSize:11}}>—</span>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -1885,6 +1908,8 @@ function TaskForm({ initial, prefill, phuTrachList, isAdmin, staffName, deXuatMo
   const [nhom, setNhom] = useState(initial?.nhom || prefill?.nhom || NHOM_CV[0].ma);
   const deXuat = !isAdmin && !initial && !!deXuatMode; // cố định theo nút nhân viên đã bấm
   const [phuTrach, setPhuTrach] = useState(initial?.phuTrach || (!isAdmin ? staffName : ''));
+  const [hoTro1, setHoTro1] = useState(initial?.hoTro?.[0] || '');
+  const [hoTro2, setHoTro2] = useState(initial?.hoTro?.[1] || '');
   const [uuTien, setUuTien] = useState(initial?.uuTien || 'Trung bình');
   const [hanHoanThanh, setHanHoanThanh] = useState(initial?.hanHoanThanh || todayISO());
   const [trangThai, setTrangThai] = useState(initial?.trangThai || 'Chưa bắt đầu');
@@ -1893,13 +1918,16 @@ function TaskForm({ initial, prefill, phuTrachList, isAdmin, staffName, deXuatMo
   const [error, setError] = useState('');
   const isCompletingPending = isAdmin && initial?.choGiaoViec;
 
+  const isQuyTrinh = nhom === '09';
+
   const submit = () => {
     if (!ten.trim()) { setError('Vui lòng nhập tên công việc'); return; }
     if (!deXuat && !phuTrach.trim()) { setError('Vui lòng nhập người phụ trách'); return; }
     if (deXuat) {
       onSave({ ten: ten.trim(), nhom, phuTrach: '', uuTien: 'Trung bình', hanHoanThanh: todayISO(), trangThai: 'Chưa bắt đầu', ghiChu, riengTu:false, choGiaoViec:true, deXuatBoi: staffName });
     } else {
-      onSave({ ten: ten.trim(), nhom, phuTrach: phuTrach.trim(), uuTien, hanHoanThanh, trangThai, ghiChu, riengTu: !isAdmin ? riengTu : false });
+      const hoTro = isQuyTrinh ? [hoTro1.trim(), hoTro2.trim()].filter(Boolean) : [];
+      onSave({ ten: ten.trim(), nhom, phuTrach: phuTrach.trim(), hoTro, uuTien, hanHoanThanh, trangThai, ghiChu, riengTu: !isAdmin ? riengTu : false });
     }
   };
 
@@ -1942,7 +1970,7 @@ function TaskForm({ initial, prefill, phuTrachList, isAdmin, staffName, deXuatMo
         </Field>
 
         {!deXuat && (
-          <Field label="Người phụ trách">
+          <Field label={isQuyTrinh ? 'Người phụ trách chính' : 'Người phụ trách'}>
             {isAdmin ? (
               <>
                 <input value={phuTrach} onChange={e=>setPhuTrach(e.target.value)} placeholder="VD: ThS. Lê Thanh Tâm" list="staff-list"
@@ -1955,6 +1983,19 @@ function TaskForm({ initial, prefill, phuTrachList, isAdmin, staffName, deXuatMo
               </div>
             )}
           </Field>
+        )}
+
+        {!deXuat && isQuyTrinh && isAdmin && (
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+            <Field label="Người hỗ trợ 1 (không bắt buộc)">
+              <input value={hoTro1} onChange={e=>setHoTro1(e.target.value)} placeholder="VD: ThS. Võ Tấn Cường" list="staff-list"
+                style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:14}}/>
+            </Field>
+            <Field label="Người hỗ trợ 2 (không bắt buộc)">
+              <input value={hoTro2} onChange={e=>setHoTro2(e.target.value)} placeholder="VD: BS. Dương Thị Anh Thư" list="staff-list"
+                style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:14}}/>
+            </Field>
+          </div>
         )}
 
         {!deXuat && (
@@ -2022,15 +2063,18 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
 
+  const isQuyTrinh = nhom === '09';
+
   const parsed = useMemo(() => {
     return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
       const parts = line.split('|').map(s => s.trim());
       const ten = parts[0] || '';
       const phuTrach = parts[1] || '';
-      const ghiChu = parts[2] || '';
-      return { ten, phuTrach, ghiChu };
+      const hoTro = isQuyTrinh ? (parts[2] || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 2) : [];
+      const ghiChu = (isQuyTrinh ? parts[3] : parts[2]) || '';
+      return { ten, phuTrach, hoTro, ghiChu };
     }).filter(it => it.ten);
-  }, [text]);
+  }, [text, isQuyTrinh]);
 
   const submit = () => {
     if (parsed.length === 0) { setError('Chưa có dòng nào hợp lệ. Mỗi dòng cần ít nhất tên việc.'); return; }
@@ -2047,7 +2091,11 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
         </div>
 
         <div style={{background:'#EAF1F7', color:'#1B6FA8', fontSize:12, padding:'9px 12px', borderRadius:9, marginBottom:14, lineHeight:1.4}}>
-          Mỗi dòng 1 việc, theo mẫu: <strong>Tên việc | Người phụ trách | Ghi chú</strong> (2 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>). Nhóm công việc và hạn hoàn thành bên dưới áp dụng chung cho cả danh sách — sửa từng việc riêng sau khi nhập nếu cần.
+          {isQuyTrinh ? (
+            <>Mỗi dòng 1 quy trình, theo mẫu: <strong>Tên quy trình | Người phụ trách chính | Người hỗ trợ (tối đa 2, cách nhau bằng dấu phẩy) | Ghi chú</strong> (3 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>).</>
+          ) : (
+            <>Mỗi dòng 1 việc, theo mẫu: <strong>Tên việc | Người phụ trách | Ghi chú</strong> (2 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>).</>
+          )} Nhóm công việc và hạn hoàn thành bên dưới áp dụng chung cho cả danh sách — sửa từng việc riêng sau khi nhập nếu cần.
         </div>
 
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
@@ -2065,7 +2113,9 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
 
         <Field label="Danh sách">
           <textarea value={text} onChange={e=>{setText(e.target.value); setError('');}} rows={10}
-            placeholder={'Quy chế công tác chiến lược và phát triển Bệnh viện | ThS. Lê Thanh Tâm\nQuy định xây dựng kế hoạch hoạt động của Bệnh viện | ThS. Võ Tấn Cường | Phối hợp cùng: Trân'}
+            placeholder={isQuyTrinh
+              ? 'Quy chế công tác chiến lược và phát triển Bệnh viện | ThS. Lê Thanh Tâm\nQuy định xây dựng kế hoạch hoạt động của Bệnh viện | ThS. Võ Tấn Cường | ThS. Lê Huyền Trân, BS. Dương Thị Anh Thư'
+              : 'Báo cáo thống kê tuần 34 | ThS. Lê Thanh Tâm\nRà soát hồ sơ bệnh án | ThS. Võ Tấn Cường | Ghi chú thêm nếu có'}
             style={{width:'100%', padding:'10px 12px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13, fontFamily:'monospace', resize:'vertical'}}/>
         </Field>
 
