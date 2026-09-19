@@ -771,6 +771,9 @@ export default function App() {
           <PendingView tasks={tasks.filter(t => t.choGiaoViec)}
             onAssign={(item) => { setEditingId(item.id); setShowForm(true); }}
             onDelete={deleteTask}/>
+        ) : isAdmin && viewMode === 'quytrinh' ? (
+          <AdminQuyTrinhView tasks={quyTrinhTasks}
+            onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}/>
         ) : (
           <div style={{display:'flex', flexDirection:'column', gap:14}}>
             <TaskColumn title="Chưa bắt đầu" color="#9AA5B1" bg="#F1F0EB" tasks={filtered.filter(t=>t.trangThai==='Chưa bắt đầu')}
@@ -1144,6 +1147,7 @@ function AdminSidebar({ current, archiveCount, pendingCount, onSelect }) {
     { key: 'table', icon: <Table2 size={16}/>, label: 'Bảng tổng hợp' },
     { key: 'calendar', icon: <Calendar size={16}/>, label: 'Lịch' },
     { key: 'catalog', icon: <ClipboardList size={16}/>, label: 'DM công việc P.KHTH' },
+    { key: 'quytrinh', icon: <ArchiveRestore size={16}/>, label: 'DM Quy trình VB nội bộ' },
     { key: 'pending', icon: <AlertCircle size={16}/>, label: `Chờ giao việc (${pendingCount})` },
     { key: 'archive', icon: <Archive size={16}/>, label: `Lưu trữ (${archiveCount})` },
   ];
@@ -1624,6 +1628,52 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
           {initial ? 'Lưu thay đổi' : 'Thêm vào danh mục'}
         </button>
       </div>
+    </div>
+  );
+}
+
+function AdminQuyTrinhView({ tasks, onEdit, onDelete }) {
+  const byPerson = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => { (map[t.phuTrach] = map[t.phuTrach] || []).push(t); });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
+  }, [tasks]);
+
+  const done = tasks.filter(t => t.trangThai === 'Đã hoàn thành').length;
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:16}}>
+      <div style={{background:'#EAF1F7', color:'#1B6FA8', fontSize:12, padding:'9px 12px', borderRadius:9, lineHeight:1.4}}>
+        Toàn bộ quy trình quản lý nội bộ (nhóm 09) đã giao cho từng người — theo dõi tiến độ và sửa/giao lại trực tiếp tại đây.
+      </div>
+
+      <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+        <StatChip icon={<ListTodo size={15}/>} label="Tổng quy trình" value={tasks.length} color={NAVY}/>
+        <StatChip icon={<CheckCircle2 size={15}/>} label="Đã hoàn thành" value={done} color="#1E7A5C"/>
+      </div>
+
+      {byPerson.length > 0 && (
+        <div className="card" style={{padding:14}}>
+          <div style={{fontSize:11.5, fontWeight:700, color:'#6b6258', marginBottom:12, letterSpacing:'0.04em'}}>TIẾN ĐỘ THEO NGƯỜI PHỤ TRÁCH</div>
+          <div style={{display:'flex', flexDirection:'column', gap:8}}>
+            {byPerson.map(([nguoi, list]) => {
+              const d = list.filter(t => t.trangThai === 'Đã hoàn thành').length;
+              const pct = list.length ? Math.round(d / list.length * 100) : 0;
+              return (
+                <div key={nguoi} style={{display:'flex', alignItems:'center', gap:10, fontSize:12.5}}>
+                  <div style={{width:160, flexShrink:0, fontWeight:600, color:'#20242B', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{nguoi || '(chưa gán)'}</div>
+                  <div style={{flex:1, height:8, background:'#EEEAE0', borderRadius:6, overflow:'hidden'}}>
+                    <div style={{width:`${pct}%`, height:'100%', background: pct===100 ? '#1E7A5C' : '#1B6FA8'}}/>
+                  </div>
+                  <div style={{width:76, flexShrink:0, textAlign:'right', color:'#6b6258'}}>{d}/{list.length} · {pct}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <TaskTable tasks={tasks} onEdit={onEdit} onDelete={onDelete}/>
     </div>
   );
 }
