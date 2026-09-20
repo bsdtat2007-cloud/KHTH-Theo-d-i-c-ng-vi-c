@@ -1668,6 +1668,7 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
   }, [tasks]);
 
   const done = tasks.filter(t => t.trangThai === 'Đã hoàn thành').length;
+  const dangXuLy = tasks.filter(t => t.trangThai === 'Đang xử lý').length;
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
@@ -1676,7 +1677,8 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
       </div>
 
       <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
-        <StatChip icon={<ListTodo size={15}/>} label="Tổng quy trình" value={tasks.length} color={NAVY}/>
+        <StatChip icon={<ListTodo size={15}/>} label="Tổng số quy trình" value={tasks.length} color={NAVY}/>
+        <StatChip icon={<CircleDot size={15}/>} label="Đang thực hiện" value={dangXuLy} color="#1B6FA8"/>
         <StatChip icon={<CheckCircle2 size={15}/>} label="Đã hoàn thành" value={done} color="#1E7A5C"/>
       </div>
 
