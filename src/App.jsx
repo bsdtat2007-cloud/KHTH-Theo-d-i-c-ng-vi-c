@@ -96,6 +96,24 @@ const NHAN_SU = [
 ];
 const NHAN_SU_NAMES = NHAN_SU.map(n => n.name);
 
+// Thứ tự hiển thị tên trong mục "Quy trình quản lý nội bộ" (theo yêu cầu, không phải theo ABC)
+const QUYTRINH_NGUOI_ORDER = [
+  'BSCKII. Lê Thanh Vũ', 'ThS. Võ Tấn Cường', 'ThS. Lê Thanh Tâm', 'BS. Dương Thị Anh Thư',
+  'ThS. Lê Huyền Trân', 'BS. Nguyễn Minh Nhựt', 'BSCKI. Lại Khôi Nguyên', 'BSCKI. Kim Ngọc Khánh Vinh',
+  'ThS. Nguyễn Quang Đạt', 'ĐD.CKI. Nguyễn Thị Ngọc Bảo', 'CN. Trần Thị Huệ', 'CN. Nguyễn Quách Ngọc Trâm',
+  'CN. Nguyễn Ngọc Thơ',
+];
+function sortByQuyTrinhOrder(entries) {
+  return [...entries].sort((a, b) => {
+    const ia = QUYTRINH_NGUOI_ORDER.indexOf(a[0]);
+    const ib = QUYTRINH_NGUOI_ORDER.indexOf(b[0]);
+    if (ia === -1 && ib === -1) return a[0].localeCompare(b[0], 'vi');
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 const SEED_TASKS = [];
 
 function uid() { return 'id' + Math.random().toString(36).slice(2, 10); }
@@ -1646,7 +1664,7 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
       (map[t.phuTrach] = map[t.phuTrach] || []).push(t);
       (t.hoTro || []).forEach(nguoi => { (map[nguoi] = map[nguoi] || []).push(t); });
     });
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
+    return sortByQuyTrinhOrder(Object.entries(map));
   }, [tasks]);
 
   const done = tasks.filter(t => t.trangThai === 'Đã hoàn thành').length;
@@ -1697,7 +1715,7 @@ function QuyTrinhView({ tasks, staffName, onAdvance }) {
       (map[t.phuTrach] = map[t.phuTrach] || []).push(t);
       (t.hoTro || []).forEach(nguoi => { (map[nguoi] = map[nguoi] || []).push(t); });
     });
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'vi'));
+    return sortByQuyTrinhOrder(Object.entries(map));
   }, [tasks]);
 
   return (
