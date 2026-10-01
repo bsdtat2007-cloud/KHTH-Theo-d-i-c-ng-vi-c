@@ -1704,15 +1704,8 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
 }
 
 function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSending, onSendSummaryEmails, summarySending }) {
+  const [filterPerson, setFilterPerson] = useState('all');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
-  const toggleSelect = (id) => setSelectedIds(prev => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
-  const toggleSelectAll = () => setSelectedIds(prev => prev.size === tasks.length ? new Set() : new Set(tasks.map(t => t.id)));
-  const selectedTasks = tasks.filter(t => selectedIds.has(t.id));
-  const selectedPeopleCount = new Set(selectedTasks.map(t => t.phuTrach)).size;
 
   const byPerson = useMemo(() => {
     const map = {};
@@ -1723,8 +1716,25 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
     return sortByQuyTrinhOrder(Object.entries(map));
   }, [tasks]);
 
-  const done = tasks.filter(t => t.trangThai === 'Đã hoàn thành').length;
-  const dangXuLy = tasks.filter(t => t.trangThai === 'Đang xử lý').length;
+  const filteredTasks = useMemo(() => {
+    if (filterPerson === 'all') return tasks;
+    return tasks.filter(t => t.phuTrach === filterPerson || (t.hoTro || []).includes(filterPerson));
+  }, [tasks, filterPerson]);
+
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(prev => {
+    const filteredIds = filteredTasks.map(t => t.id);
+    return filteredIds.every(id => prev.has(id)) ? new Set() : new Set(filteredIds);
+  });
+  const selectedTasks = tasks.filter(t => selectedIds.has(t.id));
+  const selectedPeopleCount = new Set(selectedTasks.map(t => t.phuTrach)).size;
+
+  const done = filteredTasks.filter(t => t.trangThai === 'Đã hoàn thành').length;
+  const dangXuLy = filteredTasks.filter(t => t.trangThai === 'Đang xử lý').length;
 
   return (
     <div style={{display:'flex', flexDirection:'column', gap:16}}>
@@ -1732,10 +1742,13 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
         Toàn bộ quy trình quản lý nội bộ (nhóm 09) đã giao cho từng người — theo dõi tiến độ và sửa/giao lại trực tiếp tại đây.
       </div>
 
-      <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
-        <StatChip icon={<ListTodo size={15}/>} label="Tổng số quy trình" value={tasks.length} color={NAVY}/>
+      <div style={{display:'flex', gap:10, flexWrap:'wrap', alignItems:'center'}}>
+        <StatChip icon={<ListTodo size={15}/>} label="Tổng số quy trình" value={filteredTasks.length} color={NAVY}/>
         <StatChip icon={<CircleDot size={15}/>} label="Đang thực hiện" value={dangXuLy} color="#1B6FA8"/>
         <StatChip icon={<CheckCircle2 size={15}/>} label="Đã hoàn thành" value={done} color="#1E7A5C"/>
+        <SelectBox value={filterPerson} onChange={setFilterPerson}
+          options={[{v:'all', l:'Tất cả người phụ trách'}, ...byPerson.map(([nguoi])=>({v:nguoi, l:nguoi}))]}
+          getLabel={o=>o.l} getValue={o=>o.v} minWidth={200}/>
       </div>
 
       {byPerson.length > 0 && (
@@ -1762,7 +1775,7 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
       <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
         <button className="btn" onClick={toggleSelectAll}
           style={{display:'flex', alignItems:'center', gap:6, padding:'8px 12px', borderRadius:9, fontSize:12.5, fontWeight:600, background:'#F3F0EA', color:'#6b6258'}}>
-          {selectedIds.size === tasks.length && tasks.length > 0 ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+          {filteredTasks.length > 0 && filteredTasks.every(t => selectedIds.has(t.id)) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
         </button>
         <button className="btn" disabled={selectedTasks.length === 0 || summarySending} onClick={()=>onSendSummaryEmails(selectedTasks)}
           style={{display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:9, fontSize:12.5, fontWeight:700,
@@ -1774,7 +1787,7 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
         )}
       </div>
 
-      <QuyTrinhTable tasks={tasks} isAdmin onEdit={onEdit} onDelete={onDelete}
+      <QuyTrinhTable tasks={filteredTasks} isAdmin onEdit={onEdit} onDelete={onDelete}
         onSendReminder={onSendReminder} emailSending={emailSending}
         selectedIds={selectedIds} onToggleSelect={toggleSelect}/>
     </div>
