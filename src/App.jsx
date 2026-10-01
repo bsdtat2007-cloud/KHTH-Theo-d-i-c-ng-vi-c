@@ -223,6 +223,27 @@ async function sendReminderEmail(task) {
   }
 }
 
+// Gửi 1 email tổng hợp danh sách nhiều quy trình/công việc cho 1 người (thay vì từng email riêng lẻ)
+async function sendSummaryEmail(personName, taskList) {
+  const person = NHAN_SU.find(n => n.name === personName);
+  if (!person || !person.email) return { ok: false, reason: `Không tìm thấy email của ${personName}` };
+  const sorted = [...taskList].sort((a, b) => (a.hanHoanThanh || '').localeCompare(b.hanHoanThanh || ''));
+  const summary = sorted.map((t, i) => `${i + 1}. ${t.ten}${t.hanHoanThanh ? ` (Hạn: ${t.hanHoanThanh})` : ''}`).join('\n');
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      to_email: person.email,
+      to_name: person.name,
+      task_name: `Tổng hợp ${taskList.length} quy trình/công việc được giao:\n${summary}`,
+      deadline: sorted[0]?.hanHoanThanh || '',
+      priority: `${taskList.length} việc`,
+    }, { publicKey: EMAILJS_PUBLIC_KEY });
+    return { ok: true };
+  } catch (e) {
+    console.error('Gửi email tổng hợp thất bại:', e);
+    return { ok: false, reason: `Gửi email tổng hợp tới ${personName} thất bại` };
+  }
+}
+
 // Email của Quản lý — nhận thông báo khi có đề xuất "Chờ giao việc" mới
 const ADMIN_NOTIFY_EMAIL = 'ltvu@ctump.edu.vn';
 
@@ -262,6 +283,7 @@ export default function App() {
   const [calendarMonth, setCalendarMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selectedDay, setSelectedDay] = useState(null);
   const [emailSending, setEmailSending] = useState(null); // id của task đang gửi email
+  const [summarySending, setSummarySending] = useState(false); // đang gửi email tổng hợp hàng loạt
   const [catalogPrefill, setCatalogPrefill] = useState(null); // điền sẵn khi giao việc từ danh mục
   const [formDeXuat, setFormDeXuat] = useState(false); // true = nhân viên đang mở form "Chờ giao việc"
   const [catalog, setCatalog] = useState(null); // Danh mục công việc P.KHTH — Quản lý thêm/sửa được
@@ -418,6 +440,24 @@ export default function App() {
     const result = await sendReminderEmail(task);
     setEmailSending(null);
     showToast(result.ok ? `Đã gửi nhắc việc qua email tới ${task.phuTrach}` : result.reason);
+  };
+
+  // Gom các việc đã chọn theo từng người phụ trách chính, gửi mỗi người đúng 1 email tổng hợp
+  const handleSendSummaryEmails = async (selectedTasks) => {
+    const byPerson = {};
+    selectedTasks.forEach(t => { (byPerson[t.phuTrach] = byPerson[t.phuTrach] || []).push(t); });
+    const people = Object.keys(byPerson);
+    setSummarySending(true);
+    let okCount = 0;
+    const failed = [];
+    for (const nguoi of people) {
+      const result = await sendSummaryEmail(nguoi, byPerson[nguoi]);
+      if (result.ok) okCount++; else failed.push(nguoi);
+    }
+    setSummarySending(false);
+    showToast(failed.length === 0
+      ? `Đã gửi email tổng hợp tới ${okCount} người`
+      : `Đã gửi tới ${okCount}/${people.length} người, lỗi: ${failed.join(', ')}`);
   };
 
   const phuTrachList = useMemo(() => {
@@ -803,7 +843,8 @@ export default function App() {
         ) : isAdmin && viewMode === 'quytrinh' ? (
           <AdminQuyTrinhView tasks={quyTrinhTasks}
             onEdit={(t)=>{setEditingId(t.id); setShowForm(true);}} onDelete={deleteTask}
-            onSendReminder={handleSendReminder} emailSending={emailSending}/>
+            onSendReminder={handleSendReminder} emailSending={emailSending}
+            onSendSummaryEmails={handleSendSummaryEmails} summarySending={summarySending}/>
         ) : (
           <div style={{display:'flex', flexDirection:'column', gap:14}}>
             <TaskColumn title="Chưa bắt đầu" color="#9AA5B1" bg="#F1F0EB" tasks={filtered.filter(t=>t.trangThai==='Chưa bắt đầu')}
@@ -1662,7 +1703,17 @@ function CatalogItemForm({ initial, onCancel, onSave }) {
   );
 }
 
-function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
+function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSending, onSendSummaryEmails, summarySending }) {
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleSelectAll = () => setSelectedIds(prev => prev.size === tasks.length ? new Set() : new Set(tasks.map(t => t.id)));
+  const selectedTasks = tasks.filter(t => selectedIds.has(t.id));
+  const selectedPeopleCount = new Set(selectedTasks.map(t => t.phuTrach)).size;
+
   const byPerson = useMemo(() => {
     const map = {};
     tasks.forEach(t => {
@@ -1708,8 +1759,24 @@ function AdminQuyTrinhView({ tasks, onEdit, onDelete, onSendReminder, emailSendi
         </div>
       )}
 
+      <div style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+        <button className="btn" onClick={toggleSelectAll}
+          style={{display:'flex', alignItems:'center', gap:6, padding:'8px 12px', borderRadius:9, fontSize:12.5, fontWeight:600, background:'#F3F0EA', color:'#6b6258'}}>
+          {selectedIds.size === tasks.length && tasks.length > 0 ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+        </button>
+        <button className="btn" disabled={selectedTasks.length === 0 || summarySending} onClick={()=>onSendSummaryEmails(selectedTasks)}
+          style={{display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:9, fontSize:12.5, fontWeight:700,
+            background: selectedTasks.length === 0 ? '#E3DACB' : GOLD, color: NAVY_DEEP, opacity: summarySending ? 0.6 : 1}}>
+          <Mail size={14}/> {summarySending ? 'Đang gửi...' : `Gửi email tổng hợp (${selectedTasks.length} việc · ${selectedPeopleCount} người)`}
+        </button>
+        {selectedTasks.length > 0 && (
+          <span style={{fontSize:11.5, color:'#8a8072'}}>Mỗi người chỉ nhận 1 email, liệt kê các việc đã chọn của riêng họ.</span>
+        )}
+      </div>
+
       <QuyTrinhTable tasks={tasks} isAdmin onEdit={onEdit} onDelete={onDelete}
-        onSendReminder={onSendReminder} emailSending={emailSending}/>
+        onSendReminder={onSendReminder} emailSending={emailSending}
+        selectedIds={selectedIds} onToggleSelect={toggleSelect}/>
     </div>
   );
 }
@@ -1761,8 +1828,9 @@ function QuyTrinhView({ tasks, staffName, onAdvance }) {
   );
 }
 
-function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete, onSendReminder, emailSending }) {
+function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete, onSendReminder, emailSending, selectedIds, onToggleSelect }) {
   const sorted = [...tasks].sort((a, b) => (TRANG_THAI_ORDER[a.trangThai] ?? 9) - (TRANG_THAI_ORDER[b.trangThai] ?? 9));
+  const selectable = isAdmin && !!onToggleSelect;
   return (
     <div className="card" style={{overflowX:'auto'}}>
       {sorted.length === 0 ? (
@@ -1771,6 +1839,7 @@ function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete,
         <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
           <thead>
             <tr style={{background:'#F1F0EB'}}>
+              {selectable && <th style={{...thStyle, width:32}}></th>}
               <th style={thStyle}>STT</th>
               <th style={{...thStyle, textAlign:'left', minWidth:200}}>Tên quy trình</th>
               <th style={thStyle}>Người phụ trách chính</th>
@@ -1788,6 +1857,12 @@ function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete,
               const canAdvance = staffName && (t.phuTrach === staffName || hoTro.includes(staffName)) && onAdvance;
               return (
                 <tr key={t.id} style={{borderTop:'1px solid #F0EDE3'}}>
+                  {selectable && (
+                    <td style={tdStyle}>
+                      <input type="checkbox" checked={selectedIds?.has(t.id) || false} onChange={()=>onToggleSelect(t.id)}
+                        style={{width:15, height:15, cursor:'pointer'}}/>
+                    </td>
+                  )}
                   <td style={tdStyle}>{i+1}</td>
                   <td style={{...tdStyle, textAlign:'left', fontWeight:600}}>
                     {t.ten}
