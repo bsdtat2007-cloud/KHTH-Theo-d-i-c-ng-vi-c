@@ -372,7 +372,7 @@ export default function App() {
     setEditingId(null);
   };
 
-  const importTasksBulk = (items) => {
+  const importTasksBulk = (items, { replaceNhom } = {}) => {
     if (!tasks || items.length === 0) return;
     const now = nowISO();
     const newTasks = items.map(it => ({
@@ -380,9 +380,14 @@ export default function App() {
       hanHoanThanh: it.hanHoanThanh, trangThai: 'Chưa bắt đầu', ghiChu: it.ghiChu || '',
       riengTu: false, id: uid(), batDauLuc: null, hoanThanhLuc: null, taoBoi: 'admin', createdAt: now,
     }));
-    persist([...tasks, ...newTasks]);
+    const nhom = items[0].nhom;
+    const kept = replaceNhom ? tasks.filter(t => t.nhom !== nhom) : tasks;
+    const removedCount = replaceNhom ? tasks.length - kept.length : 0;
+    persist([...kept, ...newTasks]);
     setShowBulkImport(false);
-    showToast(`Đã nhập ${newTasks.length} việc/quy trình`);
+    showToast(replaceNhom
+      ? `Đã thay ${removedCount} việc cũ bằng ${newTasks.length} việc/quy trình mới`
+      : `Đã nhập ${newTasks.length} việc/quy trình`);
   };
 
   const deleteTask = (id) => {
@@ -2101,8 +2106,10 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
   const [hanHoanThanh, setHanHoanThanh] = useState(todayISO());
   const [text, setText] = useState('');
   const [error, setError] = useState('');
+  const [replaceNhom, setReplaceNhom] = useState(false);
 
   const isQuyTrinh = nhom === '09';
+  const nhomTen = NHOM_CV.find(n => n.ma === nhom)?.ten || '';
 
   const parsed = useMemo(() => {
     return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
@@ -2111,13 +2118,14 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
       const phuTrach = parts[1] || '';
       const hoTro = isQuyTrinh ? (parts[2] || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 2) : [];
       const ghiChu = (isQuyTrinh ? parts[3] : parts[2]) || '';
-      return { ten, phuTrach, hoTro, ghiChu };
+      const hanRow = isQuyTrinh ? (parts[4] || '').trim() : '';
+      return { ten, phuTrach, hoTro, ghiChu, hanRow };
     }).filter(it => it.ten);
   }, [text, isQuyTrinh]);
 
   const submit = () => {
     if (parsed.length === 0) { setError('Chưa có dòng nào hợp lệ. Mỗi dòng cần ít nhất tên việc.'); return; }
-    onImport(parsed.map(it => ({ ...it, nhom, hanHoanThanh })));
+    onImport(parsed.map(it => ({ ...it, nhom, hanHoanThanh: it.hanRow || hanHoanThanh })), { replaceNhom });
   };
 
   return (
@@ -2131,10 +2139,10 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
 
         <div style={{background:'#EAF1F7', color:'#1B6FA8', fontSize:12, padding:'9px 12px', borderRadius:9, marginBottom:14, lineHeight:1.4}}>
           {isQuyTrinh ? (
-            <>Mỗi dòng 1 quy trình, theo mẫu: <strong>Tên quy trình | Người phụ trách chính | Người hỗ trợ (tối đa 2, cách nhau bằng dấu phẩy) | Ghi chú</strong> (3 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>).</>
+            <>Mỗi dòng 1 quy trình, theo mẫu: <strong>Tên quy trình | Người phụ trách chính | Người hỗ trợ (tối đa 2, cách nhau bằng dấu phẩy) | Ghi chú | Hạn hoàn thành (yyyy-mm-dd)</strong> (4 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>). Có ghi hạn riêng ở cuối dòng thì dùng hạn đó, dòng nào bỏ trống thì dùng hạn chung bên dưới.</>
           ) : (
             <>Mỗi dòng 1 việc, theo mẫu: <strong>Tên việc | Người phụ trách | Ghi chú</strong> (2 phần sau không bắt buộc, cách nhau bằng dấu <strong>|</strong>).</>
-          )} Nhóm công việc và hạn hoàn thành bên dưới áp dụng chung cho cả danh sách — sửa từng việc riêng sau khi nhập nếu cần.
+          )} Nhóm công việc bên dưới áp dụng chung cho cả danh sách — sửa từng việc riêng sau khi nhập nếu cần.
         </div>
 
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
@@ -2162,13 +2170,24 @@ function BulkImportForm({ phuTrachList, onCancel, onImport }) {
           Nhân viên hiện có: {phuTrachList.join(', ')}
         </div>
 
-        <div style={{fontSize:12, color:'#6b6258', marginBottom:10}}>{parsed.length} việc sẽ được thêm</div>
+        <button type="button" className="btn" onClick={()=>setReplaceNhom(v=>!v)}
+          style={{width:'100%', display:'flex', alignItems:'flex-start', gap:10, padding:'11px 12px', borderRadius:9, background: replaceNhom ? '#FBEAEA' : '#F3F0EA', border: replaceNhom ? `1px solid ${RED}` : '1px solid transparent', marginBottom:10, textAlign:'left'}}>
+          <div style={{width:18, height:18, borderRadius:5, border: `2px solid ${replaceNhom ? RED : '#B8ADA0'}`, background: replaceNhom ? RED : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:1}}>
+            {replaceNhom && <Check size={12} color="#fff"/>}
+          </div>
+          <div>
+            <div style={{fontSize:13, fontWeight:600, color: replaceNhom ? RED : '#20242B'}}>Thay thế toàn bộ việc hiện có trong nhóm "{nhomTen}"</div>
+            <div style={{fontSize:11, color:'#8a8072', marginTop:1}}>Xoá hết việc cũ trong nhóm này rồi thêm danh sách mới — dùng khi dán lại bản danh sách đã cập nhật. Việc cũ đang dở (Đang xử lý/Đã hoàn thành) cũng bị xoá theo, không khôi phục được.</div>
+          </div>
+        </button>
+
+        <div style={{fontSize:12, color:'#6b6258', marginBottom:10}}>{parsed.length} việc sẽ được thêm{replaceNhom ? `, thay cho toàn bộ việc cũ trong nhóm "${nhomTen}"` : ''}</div>
 
         {error && <div style={{color:RED, fontSize:12.5, marginBottom:10}}>{error}</div>}
 
         <button className="btn" onClick={submit}
           style={{width:'100%', padding:13, borderRadius:11, background:NAVY, color:'#fff', fontWeight:700, fontSize:14.5, marginTop:4}}>
-          Thêm {parsed.length} việc vào hệ thống
+          {replaceNhom ? `Thay thế bằng ${parsed.length} việc` : `Thêm ${parsed.length} việc vào hệ thống`}
         </button>
       </div>
     </div>
