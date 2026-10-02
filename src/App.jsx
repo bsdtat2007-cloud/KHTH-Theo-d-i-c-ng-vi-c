@@ -204,6 +204,11 @@ async function saveStaffPin(name, pin) {
   }
 }
 
+// Rút ngắn tiêu đề email, tránh tiêu đề quá dài khi tên việc dài
+function shortenSubject(s, max = 70) {
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+}
+
 // Gửi email nhắc việc qua EmailJS. Trả về true/false để báo thành công/thất bại.
 async function sendReminderEmail(task) {
   const person = NHAN_SU.find(n => n.name === task.phuTrach);
@@ -212,6 +217,7 @@ async function sendReminderEmail(task) {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email: person.email,
       to_name: person.name,
+      subject: shortenSubject(`Nhắc việc: ${task.ten}`),
       task_name: task.ten,
       deadline: task.hanHoanThanh,
       priority: task.uuTien,
@@ -233,6 +239,7 @@ async function sendSummaryEmail(personName, taskList) {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email: person.email,
       to_name: person.name,
+      subject: `Tổng hợp ${taskList.length} việc/quy trình được giao`,
       task_name: `Tổng hợp ${taskList.length} quy trình/công việc được giao:\n${summary}`,
       deadline: sorted[0]?.hanHoanThanh || '',
       priority: `${taskList.length} việc`,
@@ -252,6 +259,7 @@ async function sendPendingNotificationEmail(task) {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email: ADMIN_NOTIFY_EMAIL,
       to_name: 'Quản lý',
+      subject: shortenSubject(`Đề xuất chờ giao việc: ${task.ten}`),
       task_name: task.ten,
       deadline: task.hanHoanThanh,
       priority: task.uuTien,
