@@ -204,9 +204,12 @@ async function saveStaffPin(name, pin) {
   }
 }
 
-// Rút ngắn tiêu đề email, tránh tiêu đề quá dài khi tên việc dài
+// Làm sạch & rút ngắn tiêu đề email. Tiêu đề là văn bản thường (không phải HTML) nên các
+// ký tự EmailJS tự mã hoá thực thể HTML (/, &, <, >, ", ') cần thay bằng ký tự an toàn,
+// nếu không sẽ hiện nguyên dạng "&#x2F;" ngoài hộp thư thay vì được giải mã lại.
 function shortenSubject(s, max = 70) {
-  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+  const clean = s.replace(/\//g, '-').replace(/&/g, 'và').replace(/[<>"']/g, '');
+  return clean.length > max ? clean.slice(0, max - 1).trimEnd() + '…' : clean;
 }
 
 // Gửi email nhắc việc qua EmailJS. Trả về true/false để báo thành công/thất bại.
@@ -239,7 +242,7 @@ async function sendSummaryEmail(personName, taskList) {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email: person.email,
       to_name: person.name,
-      subject: `Tổng hợp ${taskList.length} việc/quy trình được giao`,
+      subject: shortenSubject(`Tổng hợp ${taskList.length} việc được giao`),
       task_name: `Tổng hợp ${taskList.length} quy trình/công việc được giao:\n${summary}`,
       deadline: sorted[0]?.hanHoanThanh || '',
       priority: `${taskList.length} việc`,
