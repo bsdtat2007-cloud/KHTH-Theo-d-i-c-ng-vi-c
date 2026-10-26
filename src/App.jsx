@@ -1219,7 +1219,7 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
                 <Briefcase size={20} color="#fff"/>
               </div>
               <div>
-                <div style={{fontSize:15.5, fontWeight:800, color:NAVY, lineHeight:1.3}}>BỘ CÔNG CỤ THEO DÕI CÔNG VIỆC</div>
+                <div style={{fontSize:13.5, fontWeight:800, color:NAVY, lineHeight:1.3, whiteSpace:'nowrap'}}>BỘ CÔNG CỤ THEO DÕI CÔNG VIỆC</div>
                 <div style={{fontSize:12.5, color:'#8a8072', marginTop:1}}>Phòng Kế hoạch Tổng hợp</div>
               </div>
             </div>
