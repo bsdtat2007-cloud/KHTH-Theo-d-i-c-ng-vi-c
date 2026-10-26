@@ -1147,31 +1147,34 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
   };
 
   return (
-    <div style={{minHeight:'100vh', background:`linear-gradient(180deg, ${SKY_DEEP} 0%, ${SKY} 55%, ${BG} 55%)`, fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24}}>
+    <div style={{minHeight:'100vh', background:`radial-gradient(circle at 50% 0%, ${SKY} 0%, ${SKY_DEEP} 45%, ${NAVY_DEEP} 100%)`, fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', alignItems:'center', justifyContent:'center', padding:24}}>
       <style>{`.btn { cursor:pointer; border:none; font-family:inherit; } .btn:active{transform:scale(0.97);}`}</style>
-      <div style={{textAlign:'center', marginBottom:26}}>
-        <div style={{display:'flex', justifyContent:'center', marginBottom:14}}>
-          <div style={{background:'#fff', borderRadius:'50%', padding:5, boxShadow:'0 8px 24px rgba(0,0,0,0.25)'}}>
-            <HospitalCrest size={58}/>
-          </div>
-        </div>
-        <div style={{fontSize:10.5, letterSpacing:'0.1em', textTransform:'uppercase', color:'#fff', fontWeight:700}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</div>
-        <div style={{fontSize:11, color:GOLD, fontStyle:'italic', marginTop:2}}>Chuẩn chuyên môn - Tận tâm phục vụ</div>
-        <div style={{fontSize:12, color:'rgba(255,255,255,0.85)', marginTop:10}}>Phòng Kế hoạch Tổng hợp</div>
-        <div style={{fontSize:10.5, color:'rgba(255,255,255,0.7)', fontStyle:'italic', marginTop:1}}>Kế hoạch hôm nay - Tương lai ngày mai</div>
-        <h1 style={{margin:'12px 0 0', fontSize:22, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', textTransform:'uppercase'}}>Bộ công cụ theo dõi công việc</h1>
-      </div>
+      <div style={{width:'100%', maxWidth:400, background:'#fff', borderRadius:22, overflow:'hidden', boxShadow:'0 24px 60px rgba(8,20,45,0.45)'}}>
 
+        <div style={{background:`linear-gradient(160deg, ${SKY_DEEP} 0%, ${NAVY} 100%)`, padding:'34px 28px 28px', textAlign:'center'}}>
+          <div style={{display:'flex', justifyContent:'center', marginBottom:14}}>
+            <div style={{background:'#fff', borderRadius:'50%', padding:6, boxShadow:'0 8px 20px rgba(0,0,0,0.25)'}}>
+              <HospitalCrest size={52}/>
+            </div>
+          </div>
+          <div style={{fontSize:10, letterSpacing:'0.12em', textTransform:'uppercase', color:'#fff', fontWeight:700}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</div>
+          <div style={{fontSize:10.5, color:GOLD, fontStyle:'italic', marginTop:3}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
+          <div style={{width:28, height:2, background:'rgba(255,255,255,0.25)', margin:'12px auto'}}/>
+          <div style={{fontSize:11.5, color:'rgba(255,255,255,0.9)', fontWeight:600}}>Phòng Kế hoạch Tổng hợp</div>
+          <h1 style={{margin:'10px 0 0', fontSize:18, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', letterSpacing:'0.02em'}}>BỘ CÔNG CỤ THEO DÕI CÔNG VIỆC</h1>
+        </div>
+
+        <div style={{padding:'26px 24px 28px'}}>
       {!showLogin ? (
-        <div style={{width:'100%', maxWidth:340, display:'flex', flexDirection:'column', gap:12}}>
+        <div style={{display:'flex', flexDirection:'column', gap:12}}>
           <button className="btn" onClick={onAdmin}
             style={{display:'flex', alignItems:'center', gap:12, padding:'16px 18px', borderRadius:14, background:`linear-gradient(135deg, ${GOLD}, #D99A0B)`, color:NAVY_DEEP, textAlign:'left', boxShadow:'0 6px 18px rgba(240,180,41,0.35)'}}>
             <ShieldCheck size={22}/>
             <div style={{fontWeight:800, fontSize:15}}>Quản lý</div>
           </button>
 
-          <div style={{background:'#fff', border:'1px solid #E7E3D8', borderRadius:14, padding:'14px 16px', boxShadow:'0 6px 18px rgba(18,37,72,0.08)'}}>
-            <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10, color:NAVY}}>
+          <div style={{background:'#FBFAF7', border:'1px solid #EDE7DA', borderRadius:14, padding:'16px 16px 18px'}}>
+            <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:12, color:NAVY}}>
               <User size={18}/><span style={{fontWeight:700, fontSize:15}}>Nhân viên</span>
             </div>
 
@@ -1206,7 +1209,7 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
           </div>
         </div>
       ) : (
-        <div style={{width:'100%', maxWidth:300, background:'#fff', border:'1px solid #E7E3D8', borderRadius:14, padding:20, boxShadow:'0 6px 18px rgba(18,37,72,0.08)'}}>
+        <div>
           <div style={{fontWeight:700, fontSize:15, marginBottom:10, color:NAVY}}>Nhập mã PIN quản lý</div>
           <input type="password" value={pin} onChange={e=>{setPin(e.target.value); setError('');}}
             onKeyDown={e => e.key==='Enter' && tryLogin()}
@@ -1219,6 +1222,8 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
