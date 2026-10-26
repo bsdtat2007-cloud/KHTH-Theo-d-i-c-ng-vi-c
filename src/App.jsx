@@ -594,7 +594,7 @@ export default function App() {
     <div style={{minHeight:'100vh', background:BG, fontFamily:"'Inter', -apple-system, sans-serif", color:'#20242B', paddingBottom: 60}}>
       <style>{`
         * { box-sizing: border-box; }
-        .card { background:#fff; border:1px solid #E7E3D8; border-radius:14px; }
+        .card { background:#fff; border:1px solid #ECE7DA; border-radius:16px; box-shadow:0 2px 10px rgba(16,30,60,0.05); }
         .btn { cursor:pointer; border:none; font-family:inherit; transition:all .15s ease; }
         .btn:active { transform: scale(0.97); }
         select, input, textarea { font-family:inherit; }
@@ -602,7 +602,7 @@ export default function App() {
         ::-webkit-scrollbar-thumb { background:#D7D2C4; border-radius:4px; }
         @keyframes slideUp { from { opacity:0; transform:translateY(12px);} to {opacity:1; transform:translateY(0);} }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-        .khth-sidebar { width:176px; }
+        .khth-sidebar { width:184px; }
         .khth-sidebar-label { display:inline; }
         @media (max-width: 620px) {
           .khth-sidebar { width:52px; }
@@ -616,21 +616,25 @@ export default function App() {
       `}</style>
 
       {/* Header */}
-      <div style={{background:`linear-gradient(135deg, ${SKY} 0%, ${SKY_DEEP} 100%)`, padding:'20px 18px 22px', position:'sticky', top:0, zIndex:10, boxShadow:'0 2px 12px rgba(31,90,147,0.18)'}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, maxWidth:920, margin:'0 auto'}}>
+      <div style={{background:`linear-gradient(120deg, ${SKY_DEEP} 0%, ${NAVY} 55%, ${NAVY_DEEP} 100%)`, padding:'18px 18px 20px', position:'sticky', top:0, zIndex:10, boxShadow:'0 4px 18px rgba(8,18,38,0.28)'}}>
+        <div style={{position:'absolute', left:0, right:0, top:0, height:3, background:`linear-gradient(90deg, ${GOLD}, #fff4d2, ${GOLD})`}}/>
+        <div style={{display:'flex', alignItems:'center', gap:12, maxWidth:960, margin:'0 auto'}}>
+          <div style={{background:'#fff', borderRadius:'50%', padding:4, boxShadow:'0 4px 14px rgba(0,0,0,0.25)', flexShrink:0}}>
+            <HospitalCrest size={34}/>
+          </div>
           <div style={{minWidth:0}}>
-            <div style={{fontSize:10, letterSpacing:'0.08em', textTransform:'uppercase', color:'#fff', fontWeight:700}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</div>
-            <div style={{fontSize:10.5, color:'rgba(255,255,255,0.8)', marginTop:1}}>Phòng Kế hoạch Tổng hợp</div>
-            <h1 style={{margin:'3px 0 0', fontSize:17, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', letterSpacing:'0.01em', textTransform:'uppercase'}}>Bộ công cụ theo dõi công việc</h1>
+            <div style={{fontSize:9.5, letterSpacing:'0.08em', textTransform:'uppercase', color:'#fff', fontWeight:700}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</div>
+            <div style={{fontSize:10, color:GOLD, fontStyle:'italic', marginTop:1}}>Phòng Kế hoạch Tổng hợp</div>
+            <h1 style={{margin:'3px 0 0', fontSize:16.5, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', letterSpacing:'0.01em', textTransform:'uppercase'}}>Bộ công cụ theo dõi công việc</h1>
           </div>
         </div>
 
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, maxWidth:920, margin:'14px auto 0'}}>
-          <div style={{display:'flex', alignItems:'center', gap:6, fontSize:11.5, color:'rgba(255,255,255,0.85)', fontWeight:600, background:'rgba(255,255,255,0.1)', padding:'5px 11px', borderRadius:20}}>
-            {isAdmin ? <ShieldCheck size={13}/> : <User size={13}/>}
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, maxWidth:960, margin:'14px auto 0', flexWrap:'wrap'}}>
+          <div style={{display:'flex', alignItems:'center', gap:6, fontSize:11.5, color:'#fff', fontWeight:700, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.18)', padding:'5px 11px', borderRadius:20, flexShrink:0}}>
+            {isAdmin ? <ShieldCheck size={13} color={GOLD}/> : <User size={13} color={GOLD}/>}
             {isAdmin ? 'Chế độ Quản lý' : staffName}
           </div>
-          <div style={{display:'flex', gap:8}}>
+          <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
             {isAdmin && (
               <button className="btn" onClick={() => { setEditingId(null); setFormDeXuat(false); setShowForm(true); }}
                 style={{display:'flex', alignItems:'center', gap:6, background:GOLD, color:NAVY_DEEP, padding:'9px 14px', borderRadius:9, fontWeight:700, fontSize:13}}>
@@ -720,25 +724,25 @@ export default function App() {
 
         {/* Tabs: Đang hoạt động / Lưu trữ / DM công việc P.KHTH / Quy trình quản lý nội bộ — chỉ hiện cho nhân viên, Quản lý dùng thanh dọc bên trái */}
         {!isAdmin && (
-          <div style={{display:'flex', gap:6, marginBottom:16, background:'#EEEAE0', padding:4, borderRadius:11, width:'fit-content', flexWrap:'wrap'}}>
+          <div className="card" style={{display:'flex', gap:6, marginBottom:16, padding:5, borderRadius:14, width:'fit-content', flexWrap:'wrap'}}>
             <button className="btn" onClick={()=>{setShowArchive(false); setStaffShowCatalog(false); setStaffShowQuyTrinh(false);}}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '#fff' : 'transparent', color: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? NAVY : '#8a8072', boxShadow: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              style={{display:'flex', alignItems:'center', gap:6, padding:'8px 15px', borderRadius:10, fontSize:12.5, fontWeight:700,
+                background: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : 'transparent', color: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '#fff' : '#6b6258', boxShadow: (!showArchive && !staffShowCatalog && !staffShowQuyTrinh) ? '0 4px 10px rgba(18,37,72,0.25)' : 'none'}}>
               <ListTodo size={14}/> Đang hoạt động
             </button>
             <button className="btn" onClick={()=>{setShowArchive(true); setStaffShowCatalog(false); setStaffShowQuyTrinh(false);}}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: showArchive ? '#fff' : 'transparent', color: showArchive ? NAVY : '#8a8072', boxShadow: showArchive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              style={{display:'flex', alignItems:'center', gap:6, padding:'8px 15px', borderRadius:10, fontSize:12.5, fontWeight:700,
+                background: showArchive ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : 'transparent', color: showArchive ? '#fff' : '#6b6258', boxShadow: showArchive ? '0 4px 10px rgba(18,37,72,0.25)' : 'none'}}>
               <Archive size={14}/> Lưu trữ ({archivedTasks.filter(t=>t.nhom!=='09' && (!staffName || t.phuTrach===staffName)).length})
             </button>
             <button className="btn" onClick={()=>{setStaffShowCatalog(true); setStaffShowQuyTrinh(false);}}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: staffShowCatalog ? '#fff' : 'transparent', color: staffShowCatalog ? NAVY : '#8a8072', boxShadow: staffShowCatalog ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              style={{display:'flex', alignItems:'center', gap:6, padding:'8px 15px', borderRadius:10, fontSize:12.5, fontWeight:700,
+                background: staffShowCatalog ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : 'transparent', color: staffShowCatalog ? '#fff' : '#6b6258', boxShadow: staffShowCatalog ? '0 4px 10px rgba(18,37,72,0.25)' : 'none'}}>
               <ClipboardList size={14}/> DM công việc P.KHTH
             </button>
             <button className="btn" onClick={()=>{setStaffShowQuyTrinh(true); setStaffShowCatalog(false);}}
-              style={{display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, fontSize:12.5, fontWeight:700,
-                background: staffShowQuyTrinh ? '#fff' : 'transparent', color: staffShowQuyTrinh ? NAVY : '#8a8072', boxShadow: staffShowQuyTrinh ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'}}>
+              style={{display:'flex', alignItems:'center', gap:6, padding:'8px 15px', borderRadius:10, fontSize:12.5, fontWeight:700,
+                background: staffShowQuyTrinh ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : 'transparent', color: staffShowQuyTrinh ? '#fff' : '#6b6258', boxShadow: staffShowQuyTrinh ? '0 4px 10px rgba(18,37,72,0.25)' : 'none'}}>
               <Table2 size={14}/> Quy trình quản lý nội bộ
             </button>
           </div>
@@ -1392,25 +1396,31 @@ function AdminSidebar({ current, archiveCount, pendingCount, onSelect }) {
     { key: 'archive', icon: <Archive size={16}/>, label: `Lưu trữ (${archiveCount})` },
   ];
   return (
-    <div className="card khth-sidebar" style={{padding:8, flexShrink:0, display:'flex', flexDirection:'column', gap:4, position:'sticky', top:100}}>
-      {items.map(it => (
-        <button key={it.key} className="btn khth-sidebar-btn" onClick={()=>onSelect(it.key)}
-          style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:9, fontSize:12.5, fontWeight:600, textAlign:'left',
-            background: current===it.key ? NAVY : 'transparent', color: current===it.key ? '#fff' : '#20242B'}}>
-          {it.icon}<span className="khth-sidebar-label">{it.label}</span>
-        </button>
-      ))}
+    <div className="card khth-sidebar" style={{padding:9, flexShrink:0, display:'flex', flexDirection:'column', gap:4, position:'sticky', top:100}}>
+      {items.map(it => {
+        const active = current===it.key;
+        return (
+          <button key={it.key} className="btn khth-sidebar-btn" onClick={()=>onSelect(it.key)}
+            style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:11, fontSize:12.5, fontWeight:700, textAlign:'left',
+              background: active ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : 'transparent',
+              color: active ? '#fff' : '#4b4538',
+              boxShadow: active ? '0 4px 12px rgba(18,37,72,0.3)' : 'none',
+              borderLeft: active ? `3px solid ${GOLD}` : '3px solid transparent'}}>
+            {it.icon}<span className="khth-sidebar-label">{it.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 function StatChip({ icon, label, value, color }) {
   return (
-    <div className="card" style={{padding:'10px 14px', display:'flex', alignItems:'center', gap:8, minWidth:104, flexShrink:0}}>
-      <div style={{color}}>{icon}</div>
+    <div className="card" style={{padding:'11px 14px', display:'flex', alignItems:'center', gap:10, minWidth:112, flexShrink:0}}>
+      <div style={{width:34, height:34, borderRadius:10, background:color+'18', color, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>{icon}</div>
       <div>
-        <div style={{fontSize:16, fontWeight:800, lineHeight:1}}>{value}</div>
-        <div style={{fontSize:10, color:'#8a8072', marginTop:2, whiteSpace:'nowrap'}}>{label}</div>
+        <div style={{fontSize:17, fontWeight:800, lineHeight:1, color:NAVY_DEEP}}>{value}</div>
+        <div style={{fontSize:10, color:'#8a8072', marginTop:3, whiteSpace:'nowrap'}}>{label}</div>
       </div>
     </div>
   );
@@ -1420,7 +1430,7 @@ function SelectBox({ value, onChange, options, getLabel, getValue, minWidth }) {
   return (
     <div style={{position:'relative', minWidth}}>
       <select value={value} onChange={e=>onChange(e.target.value)}
-        style={{width:'100%', appearance:'none', padding:'8px 28px 8px 10px', borderRadius:9, border:'1px solid #E3DACB', fontSize:13, background:'#fff', color:'#20242B'}}>
+        style={{width:'100%', appearance:'none', padding:'8px 28px 8px 10px', borderRadius:10, border:'1px solid #E3DACB', fontSize:13, background:'#fff', color:'#20242B'}}>
         {options.map(o => <option key={getValue(o)} value={getValue(o)}>{getLabel(o)}</option>)}
       </select>
       <ChevronDown size={14} style={{position:'absolute', right:9, top:10, color:'#A89B85', pointerEvents:'none'}}/>
@@ -1439,7 +1449,7 @@ function TaskTable({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
       ) : (
         <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
           <thead>
-            <tr style={{background:'#F1F0EB'}}>
+            <tr style={{background:'#EEF2F8'}}>
               <th style={thStyle}>STT</th>
               <th style={{...thStyle, textAlign:'left', minWidth:180}}>Tên công việc</th>
               <th style={thStyle}>Nhóm</th>
@@ -1499,7 +1509,7 @@ function TaskTable({ tasks, onEdit, onDelete, onSendReminder, emailSending }) {
     </div>
   );
 }
-const thStyle = { padding:'9px 10px', fontSize:11, fontWeight:700, color:'#6b6258', textAlign:'center', whiteSpace:'nowrap' };
+const thStyle = { padding:'10px 10px', fontSize:10.5, fontWeight:800, color:NAVY_DEEP, textAlign:'center', whiteSpace:'nowrap', letterSpacing:'0.02em' };
 const tdStyle = { padding:'9px 10px', fontSize:12, color:'#20242B', textAlign:'center' };
 
 function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, onEdit, onDelete, onSendReminder, emailSending }) {
@@ -1584,7 +1594,7 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
       <div className="khth-calendar-right" style={{flex:1, minWidth:0}}>
         {selectedDay ? (
           <div className="card" style={{overflow:'hidden'}}>
-            <div style={{background:'#F1F0EB', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div style={{background:'#EEF2F8', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <span style={{fontSize:12.5, fontWeight:700, color:'#20242B'}}>Công việc ngày {selectedDay.split('-').reverse().join('/')} ({selectedTasks.length})</span>
               <button className="btn" onClick={()=>onSelectDay(null)} style={{fontSize:11, color:'#1B6FA8', background:'transparent', padding:'2px 6px'}}>Xem cả tháng</button>
             </div>
@@ -1596,7 +1606,7 @@ function TaskCalendar({ tasks, month, onMonthChange, selectedDay, onSelectDay, o
           </div>
         ) : (
           <div className="card" style={{overflow:'hidden'}}>
-            <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
+            <div style={{background:'#EEF2F8', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
               Danh sách công việc trong tháng ({tasks.length})
             </div>
             {monthDates.length === 0 ? (
@@ -1653,15 +1663,15 @@ function CalendarTaskRow({ t, onEdit, onDelete, onSendReminder, emailSending }) 
 function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDelete, onAdvance, advanceLabel, advanceIcon, onSendReminder, emailSending }) {
   return (
     <div className="card" style={{overflow:'hidden'}}>
-      <div style={{background:bg, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-        <div style={{display:'flex', alignItems:'center', gap:7}}>
-          <div style={{width:8, height:8, borderRadius:'50%', background:color}}/>
-          <span style={{fontSize:13, fontWeight:700, color:'#20242B'}}>{title}</span>
+      <div style={{background:bg, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid #F0EDE3'}}>
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <div style={{width:9, height:9, borderRadius:'50%', background:color, boxShadow:`0 0 0 3px ${color}22`}}/>
+          <span style={{fontSize:13.5, fontWeight:800, color:NAVY_DEEP}}>{title}</span>
         </div>
-        <span style={{fontSize:12, fontWeight:700, color}}>{tasks.length}</span>
+        <span style={{fontSize:11.5, fontWeight:800, color:'#fff', background:color, padding:'2px 9px', borderRadius:20}}>{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
-        <div style={{padding:'16px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào</div>
+        <div style={{padding:'20px 14px', fontSize:12.5, color:'#A89B85', textAlign:'center'}}>Không có việc nào</div>
       ) : (
         <div>
           {tasks.map(t => {
@@ -1672,23 +1682,23 @@ function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDel
             const canManage = isAdmin || (staffName && t.taoBoi === staffName);
             const canRemind = isAdmin && !selfCreated && onSendReminder;
             return (
-              <div key={t.id} style={{padding:'10px 14px', borderTop:'1px solid #F0EDE3', display:'flex', gap:10, alignItems:'flex-start'}}>
+              <div key={t.id} style={{padding:'12px 16px 12px 13px', borderTop:'1px solid #F3F0E8', borderLeft:`3px solid ${overdue ? RED : color}`, display:'flex', gap:10, alignItems:'flex-start'}}>
                 <div style={{flex:1, minWidth:0}}>
-                  <div style={{fontSize:13.5, fontWeight:600, color:'#20242B', lineHeight:1.35}}>{t.ten}</div>
-                  <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:5, alignItems:'center'}}>
-                    <span style={{fontSize:10.5, color:'#8a8072'}}>{t.phuTrach}</span>
-                    <span style={{fontSize:10, padding:'1px 7px', borderRadius:20, background: COLOR_UUTIEN[t.uuTien]+'20', color:COLOR_UUTIEN[t.uuTien], fontWeight:600}}>{t.uuTien}</span>
-                    <span style={{fontSize:10.5, color: overdue ? RED : '#8a8072', fontWeight: overdue?700:400}}>
+                  <div style={{fontSize:13.5, fontWeight:700, color:'#20242B', lineHeight:1.35}}>{t.ten}</div>
+                  <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:6, alignItems:'center'}}>
+                    <span style={{fontSize:10.5, color:'#8a8072', fontWeight:600}}>{t.phuTrach}</span>
+                    <span style={{fontSize:10, padding:'2px 8px', borderRadius:20, background: COLOR_UUTIEN[t.uuTien]+'1c', color:COLOR_UUTIEN[t.uuTien], fontWeight:700}}>{t.uuTien}</span>
+                    <span style={{fontSize:10.5, color: overdue ? RED : '#8a8072', fontWeight: overdue?700:500, display:'flex', alignItems:'center', gap:3}}>
                       {overdue ? `Trễ ${Math.abs(dl)} ngày` : `Hạn ${t.hanHoanThanh}`}
                     </span>
                     {selfCreated && (
-                      <span style={{fontSize:9.5, padding:'1px 7px', borderRadius:20, background:'#EDE7DA', color:'#8a7350', fontWeight:600}}>Tự thêm</span>
+                      <span style={{fontSize:9.5, padding:'2px 8px', borderRadius:20, background:'#EDE7DA', color:'#8a7350', fontWeight:700}}>Tự thêm</span>
                     )}
                     {t.riengTu && (
-                      <span style={{fontSize:9.5, padding:'1px 7px', borderRadius:20, background:'#FBEAEA', color:RED, fontWeight:600}}>Riêng tư</span>
+                      <span style={{fontSize:9.5, padding:'2px 8px', borderRadius:20, background:'#FBEAEA', color:RED, fontWeight:700}}>Riêng tư</span>
                     )}
                   </div>
-                  <div style={{fontSize:10, color:'#B8ADA0', marginTop:3}}>{t.nhom} · {nhomTen}</div>
+                  <div style={{fontSize:10, color:'#B8ADA0', marginTop:4}}>{t.nhom} · {nhomTen}</div>
                   {(t.batDauLuc || t.hoanThanhLuc) && (
                     <div style={{fontSize:9.5, color:'#A89B85', marginTop:4, display:'flex', gap:10}}>
                       {t.batDauLuc && <span>Bắt đầu: {fmtDateTime(t.batDauLuc)}</span>}
@@ -1699,24 +1709,24 @@ function TaskColumn({ title, color, bg, tasks, isAdmin, staffName, onEdit, onDel
                 <div style={{display:'flex', flexDirection:'column', gap:6, alignItems:'center', flexShrink:0}}>
                   {onAdvance && (
                     <button className="btn" onClick={()=>onAdvance(t.id)} title={advanceLabel}
-                      style={{background:color, color:'#fff', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                      style={{background:color, color:'#fff', width:27, height:27, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 2px 6px ${color}55`}}>
                       {advanceIcon}
                     </button>
                   )}
                   {canRemind && (
                     <button className="btn" onClick={()=>onSendReminder(t)} title="Nhắc qua email" disabled={emailSending===t.id}
-                      style={{background:'#F3F0EA', color:'#1B6FA8', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', opacity: emailSending===t.id ? 0.5 : 1}}>
+                      style={{background:'#EAF2F7', color:'#1B6FA8', width:27, height:27, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', opacity: emailSending===t.id ? 0.5 : 1}}>
                       <Mail size={12}/>
                     </button>
                   )}
                   {canManage && (
                     <>
                       <button className="btn" onClick={()=>onEdit(t)} title="Sửa"
-                        style={{background:'#F3F0EA', color:'#6b6258', width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        style={{background:'#F3F0EA', color:'#6b6258', width:27, height:27, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center'}}>
                         <Pencil size={12}/>
                       </button>
                       <button className="btn" onClick={()=>onDelete(t.id)} title="Xoá"
-                        style={{background:'#F3F0EA', color:RED, width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                        style={{background:'#FBEAEA', color:RED, width:27, height:27, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center'}}>
                         <Trash2 size={12}/>
                       </button>
                     </>
@@ -2020,7 +2030,7 @@ function QuyTrinhTable({ tasks, staffName, onAdvance, isAdmin, onEdit, onDelete,
       ) : (
         <table style={{width:'100%', borderCollapse:'collapse', minWidth:640}}>
           <thead>
-            <tr style={{background:'#F1F0EB'}}>
+            <tr style={{background:'#EEF2F8'}}>
               {selectable && <th style={{...thStyle, width:32}}></th>}
               <th style={thStyle}>STT</th>
               <th style={{...thStyle, textAlign:'left', minWidth:200}}>Tên quy trình</th>
@@ -2156,7 +2166,7 @@ function CatalogView({ catalog, isAdmin, onUpsert, onDelete }) {
       ) : (
         grouped.map(g => (
           <div key={g.nhom.ma} className="card" style={{overflow:'hidden', marginBottom:12}}>
-            <div style={{background:'#F1F0EB', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
+            <div style={{background:'#EEF2F8', padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#20242B'}}>
               {g.nhom.ma} · {g.nhom.ten}
             </div>
             {g.items.map(item => (
