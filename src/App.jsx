@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, Users, LogOut, PlayCircle, Archive, ArchiveRestore, Bell, Table2, Calendar, Mail, ChevronLeft, ChevronRight, LayoutGrid, ClipboardList, ChevronRight as ChevronRightSmall, KeyRound, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Plus, X, ChevronDown, Search, Trash2, Pencil, Check, ListTodo, CircleDot, CheckCircle2, AlertCircle, ShieldCheck, User, Users, LogOut, PlayCircle, Archive, ArchiveRestore, Bell, Table2, Calendar, Mail, ChevronLeft, ChevronRight, LayoutGrid, ClipboardList, ChevronRight as ChevronRightSmall, KeyRound, Eye, EyeOff, MapPin, Briefcase, Lock, RotateCcw, LogIn, Info, ClipboardCheck, BarChart3, Heart } from 'lucide-react';
 import hospitalPhoto from './hospital.jpg';
 const HOSPITAL_LOGO_BASE64 = "data:image/jpeg;base64,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";
 
@@ -1149,147 +1149,233 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
     else setStaffError('Sai mã PIN, vui lòng thử lại');
   };
 
-  const selectStaffTab = () => {
+  const selectStaffRole = () => {
     if (showLogin) onCancelLogin();
   };
-  const selectAdminTab = () => {
-    if (!showLogin) onAdmin();
+  const selectAdminRole = () => {
+    if (!showLogin) { onAdmin(); setStaffStep('pick'); setStaffError(''); }
   };
 
-  const FEATURES = [
-    { icon: <ListTodo size={16}/>, text: 'Theo dõi tiến độ công việc theo thời gian thực' },
-    { icon: <ArchiveRestore size={16}/>, text: 'Quản lý quy trình văn bản nội bộ tập trung' },
-    { icon: <Mail size={16}/>, text: 'Tự động nhắc việc và gửi báo cáo qua email' },
+  const BENEFITS = [
+    { icon: <ClipboardCheck size={20}/>, title: 'Theo dõi tiến độ công việc', text: 'Nhanh chóng · Chính xác · Hiệu quả' },
+    { icon: <Users size={20}/>, title: 'Tối ưu phối hợp', text: 'Kết nối các đơn vị · Nâng cao hiệu suất' },
+    { icon: <BarChart3 size={20}/>, title: 'Hỗ trợ công tác điều hành', text: 'Dựa trên dữ liệu · Hướng đến mục tiêu chung' },
   ];
 
-  const glassInputStyle = {
-    width:'100%', padding:'12px 42px 12px 14px', borderRadius:12, fontSize:16, letterSpacing:4, textAlign:'center',
-    background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.22)', color:'#fff',
+  const inputStyle = {
+    width:'100%', padding:'12px 14px 12px 40px', borderRadius:12, fontSize:14.5, border:'1.5px solid #E3DACB',
+    background:'#FBFAF7', color:NAVY_DEEP,
   };
 
   return (
-    <div style={{minHeight:'100vh', position:'relative', backgroundImage:`url(${hospitalPhoto})`, backgroundSize:'cover', backgroundPosition:'center', fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', flexDirection:'column', overflow:'hidden'}}>
+    <div style={{minHeight:'100vh', fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', flexDirection:'column', background:'#F4F7FB'}}>
       <style>{`
         .btn { cursor:pointer; border:none; font-family:inherit; }
         .btn:active{transform:scale(0.97);}
-        .khth-glass-input::placeholder{ color:rgba(255,255,255,0.45); letter-spacing:4px; }
-        .khth-glass-select option{ color:#20242B; }
-        .khth-login-tab { flex:1; padding:12px 10px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:7px; font-weight:700; font-size:13px; transition:all .18s ease; }
-        .khth-login-main { flex:1; display:flex; align-items:center; padding:56px 64px; }
-        .khth-login-hero-text { flex:1; min-width:300px; }
-        @media (max-width: 920px) {
-          .khth-login-main { padding:20px 16px 28px; justify-content:center; }
-          .khth-login-hero-text { display:none; }
+        .khth-role-btn { flex:1; display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:14px; text-align:left; transition:all .18s ease; cursor:pointer; }
+        .khth-login-main { flex:1; display:flex; align-items:stretch; }
+        .khth-login-photo { flex:0 0 42%; position:relative; min-height:420px; background-size:cover; background-position:center; }
+        .khth-login-benefits { flex:1; min-width:280px; }
+        .khth-footer-item { display:flex; align-items:center; gap:8px; }
+        .khth-footer-divider { width:1px; height:14px; background:rgba(255,255,255,0.25); }
+        @media (max-width: 980px) {
+          .khth-login-photo { display:none; }
+          .khth-login-benefits { display:none; }
+        }
+        @media (max-width: 560px) {
+          .khth-footer-divider { display:none; }
+          .khth-footer-bar { flex-direction:column; gap:8px !important; padding:14px 16px !important; }
         }
       `}</style>
 
-      <div style={{position:'absolute', inset:0, background:`linear-gradient(115deg, rgba(5,12,26,0.94) 0%, rgba(8,19,40,0.82) 34%, rgba(10,24,48,0.42) 58%, rgba(8,18,38,0.6) 100%)`}}/>
-      <div style={{position:'absolute', inset:0, background:`radial-gradient(circle at 82% 78%, rgba(240,180,41,0.16), transparent 42%)`}}/>
-      <div style={{position:'absolute', left:0, right:0, top:0, height:3, background:`linear-gradient(90deg, ${GOLD}, #fff4d2, ${GOLD})`, zIndex:2}}/>
-
-      <div style={{position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:13, padding:'26px 28px 0 32px'}}>
-        <div style={{background:'#fff', borderRadius:'50%', padding:5, boxShadow:`0 0 0 3px rgba(240,180,41,0.4), 0 10px 26px rgba(0,0,0,0.45)`, flexShrink:0}}>
-          <HospitalCrest size={42}/>
+      <div style={{background:'linear-gradient(180deg, #EAF3FC 0%, #F8FBFE 100%)', borderBottom:'1px solid #E1EAF3', padding:'22px 20px 18px', textAlign:'center'}}>
+        <div style={{display:'inline-flex', alignItems:'center', gap:12}}>
+          <div style={{background:'#fff', borderRadius:'50%', padding:4, boxShadow:'0 6px 16px rgba(27,58,107,0.18)', flexShrink:0}}>
+            <HospitalCrest size={46}/>
+          </div>
+          <div style={{textAlign:'left'}}>
+            <div style={{fontSize:17, fontWeight:800, color:NAVY, letterSpacing:'0.01em'}}>BỆNH VIỆN TRƯỜNG ĐẠI HỌC Y DƯỢC CẦN THƠ</div>
+            <div style={{fontSize:13, color:GOLD, fontStyle:'italic', fontWeight:600, marginTop:2}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
+          </div>
         </div>
-        <div>
-          <div style={{fontSize:11.5, letterSpacing:'0.07em', textTransform:'uppercase', color:'#fff', fontWeight:700, textShadow:'0 2px 10px rgba(0,0,0,0.5)'}}>Trường Đại học Y Dược Cần Thơ</div>
-          <div style={{fontSize:10.5, color:GOLD, fontStyle:'italic', marginTop:2}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:10, marginTop:12}}>
+          <div style={{width:60, height:1.5, background:'#D8C98A'}}/>
+          <Heart size={13} color={GOLD} fill={GOLD}/>
+          <div style={{width:60, height:1.5, background:'#D8C98A'}}/>
         </div>
       </div>
 
-      <div className="khth-login-main" style={{position:'relative', zIndex:2}}>
-        <div style={{display:'flex', width:'100%', maxWidth:1120, margin:'0 auto', alignItems:'center', gap:56, flexWrap:'wrap', justifyContent:'center'}}>
+      <div className="khth-login-main">
+        <div className="khth-login-photo" style={{backgroundImage:`url(${hospitalPhoto})`}}>
+          <div style={{position:'absolute', inset:0, background:`linear-gradient(100deg, rgba(10,24,48,0.05) 0%, rgba(10,24,48,0.1) 55%, ${SKY_DEEP} 100%)`}}/>
+        </div>
 
-          <div className="khth-login-hero-text">
-            <h1 style={{margin:'0 0 12px', fontSize:38, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', lineHeight:1.22, textShadow:'0 6px 24px rgba(0,0,0,0.55)'}}>
-              Bộ công cụ theo<br/>dõi công việc
-            </h1>
-            <div style={{fontSize:14, color:GOLD, fontWeight:700, marginBottom:30, letterSpacing:'0.02em'}}>Phòng Kế hoạch Tổng hợp</div>
-            <div style={{display:'flex', flexDirection:'column', gap:15}}>
-              {FEATURES.map((f,i) => (
-                <div key={i} style={{display:'flex', alignItems:'center', gap:14}}>
-                  <div style={{background:'rgba(255,255,255,0.1)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.16)', borderRadius:11, padding:10, display:'flex', color:GOLD, flexShrink:0}}>{f.icon}</div>
-                  <span style={{fontSize:13.5, color:'rgba(255,255,255,0.92)', fontWeight:500}}>{f.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div style={{flex:1, background:`linear-gradient(135deg, ${SKY} 0%, ${SKY_DEEP} 45%, ${NAVY_DEEP} 100%)`, display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 32px', gap:56, flexWrap:'wrap'}}>
 
-          <div style={{width:'100%', maxWidth:400, borderRadius:27, padding:'1.5px', background:`linear-gradient(150deg, rgba(240,180,41,0.6), rgba(255,255,255,0.08) 45%, rgba(240,180,41,0.3))`, boxShadow:'0 32px 80px rgba(0,0,0,0.55)', flexShrink:0}}>
-            <div style={{borderRadius:25.5, background:'rgba(13,28,56,0.55)', backdropFilter:'blur(26px)', WebkitBackdropFilter:'blur(26px)', padding:'30px 26px', border:'1px solid rgba(255,255,255,0.08)'}}>
+          <div style={{width:'100%', maxWidth:400, background:'#fff', borderRadius:24, padding:'28px 26px', boxShadow:'0 28px 70px rgba(5,14,32,0.4)', flexShrink:0}}>
 
-              <div style={{display:'flex', gap:6, padding:4, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, marginBottom:22}}>
-                <button type="button" className="btn khth-login-tab" onClick={selectStaffTab}
-                  style={{background: !showLogin ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'transparent', color: !showLogin ? NAVY_DEEP : 'rgba(255,255,255,0.65)', boxShadow: !showLogin ? '0 4px 14px rgba(240,180,41,0.35)' : 'none'}}>
-                  <User size={15}/> Nhân viên
-                </button>
-                <button type="button" className="btn khth-login-tab" onClick={selectAdminTab}
-                  style={{background: showLogin ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'transparent', color: showLogin ? NAVY_DEEP : 'rgba(255,255,255,0.65)', boxShadow: showLogin ? '0 4px 14px rgba(240,180,41,0.35)' : 'none'}}>
-                  <ShieldCheck size={15}/> Quản lý
-                </button>
+            <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:6}}>
+              <div style={{background:NAVY, borderRadius:12, padding:10, display:'flex', flexShrink:0}}>
+                <Briefcase size={20} color="#fff"/>
               </div>
+              <div>
+                <div style={{fontSize:15.5, fontWeight:800, color:NAVY, lineHeight:1.3}}>BỘ CÔNG CỤ THEO DÕI CÔNG VIỆC</div>
+                <div style={{fontSize:12.5, color:'#8a8072', marginTop:1}}>Phòng Kế hoạch Tổng hợp</div>
+              </div>
+            </div>
+            <div style={{width:48, height:3, background:GOLD, borderRadius:2, margin:'10px 0 20px'}}/>
 
-              {!showLogin ? (
-                staffStep === 'pick' ? (
-                  <>
-                    <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Chọn tên của bạn để tiếp tục</div>
-                    <select className="khth-glass-select" value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
-                      style={{width:'100%', padding:'12px 12px', borderRadius:12, border:'1px solid rgba(255,255,255,0.22)', fontSize:13.5, marginBottom:14, background:'rgba(255,255,255,0.08)', color: selectedStaff ? '#fff' : 'rgba(255,255,255,0.55)'}}>
+            <div style={{display:'flex', gap:10, marginBottom:16}}>
+              <button type="button" className="btn khth-role-btn" onClick={selectAdminRole}
+                style={{background: showLogin ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : '#fff', border: showLogin ? `2px solid ${GOLD}` : '1.5px solid #E3DACB', position:'relative'}}>
+                <Users size={22} color={showLogin ? '#fff' : NAVY}/>
+                <div>
+                  <div style={{fontWeight:700, fontSize:13.5, color: showLogin ? '#fff' : NAVY_DEEP}}>Quản lý</div>
+                  <div style={{fontSize:10.5, color: showLogin ? 'rgba(255,255,255,0.75)' : '#8a8072', marginTop:1}}>Dành cho cán bộ quản lý</div>
+                </div>
+                {showLogin && (
+                  <div style={{position:'absolute', top:-7, right:-7, width:20, height:20, borderRadius:'50%', background:GOLD, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 6px rgba(0,0,0,0.25)'}}>
+                    <Check size={12} color={NAVY_DEEP} strokeWidth={3}/>
+                  </div>
+                )}
+              </button>
+              <button type="button" className="btn khth-role-btn" onClick={selectStaffRole}
+                style={{background: !showLogin ? `linear-gradient(135deg, ${NAVY}, ${NAVY_DEEP})` : '#fff', border: !showLogin ? `2px solid ${GOLD}` : '1.5px solid #E3DACB', position:'relative'}}>
+                <User size={22} color={!showLogin ? '#fff' : NAVY}/>
+                <div>
+                  <div style={{fontWeight:700, fontSize:13.5, color: !showLogin ? '#fff' : NAVY_DEEP}}>Nhân viên</div>
+                  <div style={{fontSize:10.5, color: !showLogin ? 'rgba(255,255,255,0.75)' : '#8a8072', marginTop:1}}>Dành cho nhân viên</div>
+                </div>
+                {!showLogin && (
+                  <div style={{position:'absolute', top:-7, right:-7, width:20, height:20, borderRadius:'50%', background:GOLD, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 6px rgba(0,0,0,0.25)'}}>
+                    <Check size={12} color={NAVY_DEEP} strokeWidth={3}/>
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {!showLogin ? (
+              staffStep === 'pick' ? (
+                <>
+                  <div style={{position:'relative', marginBottom:14}}>
+                    <User size={16} color="#A89B85" style={{position:'absolute', left:13, top:'50%', transform:'translateY(-50%)'}}/>
+                    <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
+                      style={{...inputStyle, appearance:'none', color: selectedStaff ? NAVY_DEEP : '#9a9080'}}>
                       <option value="">Chọn tên của bạn...</option>
                       {staffList.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <button className="btn" disabled={!selectedStaff} onClick={goToStaffPin}
-                      style={{width:'100%', padding:13, borderRadius:12, background: selectedStaff ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'rgba(255,255,255,0.1)', color: selectedStaff ? NAVY_DEEP : 'rgba(255,255,255,0.4)', fontWeight:800, fontSize:13.5, boxShadow: selectedStaff ? '0 8px 22px rgba(240,180,41,0.3)' : 'none'}}>
-                      Tiếp tục
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Nhập mã PIN của <strong style={{color:'#fff'}}>{selectedStaff}</strong></div>
-                    <div style={{position:'relative', marginBottom:12}}>
-                      <input type={showStaffPin ? 'text' : 'password'} className="khth-glass-input" value={staffPin} onChange={e=>{setStaffPin(e.target.value); setStaffError('');}}
-                        onKeyDown={e => e.key==='Enter' && tryStaffLogin()}
-                        placeholder="••••" autoFocus inputMode="numeric" maxLength={6}
-                        style={glassInputStyle}/>
-                      <button type="button" className="btn" onClick={()=>setShowStaffPin(v=>!v)}
-                        style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'rgba(255,255,255,0.6)', padding:4}}>
-                        {showStaffPin ? <EyeOff size={17}/> : <Eye size={17}/>}
-                      </button>
-                    </div>
-                    {staffError && <div style={{color:'#FF9EAD', fontSize:12, marginBottom:10}}>{staffError}</div>}
-                    <div style={{display:'flex', gap:8}}>
-                      <button className="btn" onClick={()=>{setStaffStep('pick'); setStaffError('');}}
-                        style={{flex:1, padding:12, borderRadius:12, background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.8)', fontWeight:600, fontSize:13.5}}>Quay lại</button>
-                      <button className="btn" onClick={tryStaffLogin}
-                        style={{flex:1, padding:12, borderRadius:12, background:`linear-gradient(135deg, ${GOLD}, #D99A0B)`, color:NAVY_DEEP, fontWeight:800, fontSize:13.5, boxShadow:'0 8px 22px rgba(240,180,41,0.3)'}}>Vào</button>
-                    </div>
-                  </>
-                )
+                  </div>
+                  <button className="btn" disabled={!selectedStaff} onClick={goToStaffPin}
+                    style={{width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:13, borderRadius:12,
+                      background: selectedStaff ? NAVY : '#E3DACB', color:'#fff', fontWeight:700, fontSize:13.5}}>
+                    <LogIn size={16}/> Tiếp tục
+                  </button>
+                </>
               ) : (
                 <>
-                  <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Nhập mã PIN quản lý</div>
-                  <div style={{position:'relative', marginBottom:12}}>
-                    <input type={showAdminPin ? 'text' : 'password'} className="khth-glass-input" value={pin} onChange={e=>{setPin(e.target.value); setError('');}}
-                      onKeyDown={e => e.key==='Enter' && tryLogin()}
-                      placeholder="••••" autoFocus
-                      style={glassInputStyle}/>
-                    <button type="button" className="btn" onClick={()=>setShowAdminPin(v=>!v)}
-                      style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'rgba(255,255,255,0.6)', padding:4}}>
-                      {showAdminPin ? <EyeOff size={17}/> : <Eye size={17}/>}
+                  <div style={{position:'relative', marginBottom:10}}>
+                    <User size={16} color="#A89B85" style={{position:'absolute', left:13, top:'50%', transform:'translateY(-50%)'}}/>
+                    <div style={{...inputStyle, display:'flex', alignItems:'center', color:NAVY_DEEP, fontWeight:600}}>Nhập mã PIN của {selectedStaff}</div>
+                  </div>
+                  <div style={{position:'relative', marginBottom:14}}>
+                    <Lock size={16} color="#A89B85" style={{position:'absolute', left:13, top:'50%', transform:'translateY(-50%)'}}/>
+                    <input type={showStaffPin ? 'text' : 'password'} value={staffPin} onChange={e=>{setStaffPin(e.target.value); setStaffError('');}}
+                      onKeyDown={e => e.key==='Enter' && tryStaffLogin()}
+                      placeholder="••••••••" autoFocus inputMode="numeric" maxLength={6}
+                      style={{...inputStyle, paddingRight:40, letterSpacing:3}}/>
+                    <button type="button" className="btn" onClick={()=>setShowStaffPin(v=>!v)}
+                      style={{position:'absolute', right:11, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'#A89B85', padding:3}}>
+                      {showStaffPin ? <EyeOff size={16}/> : <Eye size={16}/>}
                     </button>
                   </div>
-                  {error && <div style={{color:'#FF9EAD', fontSize:12, marginBottom:10}}>{error}</div>}
-                  <button className="btn" onClick={tryLogin}
-                    style={{width:'100%', padding:13, borderRadius:12, background:`linear-gradient(135deg, ${GOLD}, #D99A0B)`, color:NAVY_DEEP, fontWeight:800, fontSize:13.5, boxShadow:'0 8px 22px rgba(240,180,41,0.3)'}}>Vào</button>
+                  {staffError && <div style={{color:RED, fontSize:12, marginBottom:10}}>{staffError}</div>}
+                  <div style={{display:'flex', gap:8}}>
+                    <button className="btn" onClick={()=>{setStaffStep('pick'); setStaffError('');}}
+                      style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:12, borderRadius:12, background:'#fff', border:'1.5px solid #E3DACB', color:NAVY, fontWeight:700, fontSize:13}}>
+                      <RotateCcw size={15}/> Quay lại
+                    </button>
+                    <button className="btn" onClick={tryStaffLogin}
+                      style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:12, borderRadius:12, background:NAVY, color:'#fff', fontWeight:700, fontSize:13}}>
+                      <LogIn size={15}/> Đăng nhập
+                    </button>
+                  </div>
                 </>
-              )}
+              )
+            ) : (
+              <>
+                <div style={{position:'relative', marginBottom:14}}>
+                  <Lock size={16} color="#A89B85" style={{position:'absolute', left:13, top:'50%', transform:'translateY(-50%)'}}/>
+                  <input type={showAdminPin ? 'text' : 'password'} value={pin} onChange={e=>{setPin(e.target.value); setError('');}}
+                    onKeyDown={e => e.key==='Enter' && tryLogin()}
+                    placeholder="Nhập mã PIN quản lý" autoFocus
+                    style={{...inputStyle, paddingRight:40, letterSpacing:3}}/>
+                  <button type="button" className="btn" onClick={()=>setShowAdminPin(v=>!v)}
+                    style={{position:'absolute', right:11, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'#A89B85', padding:3}}>
+                    {showAdminPin ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
+                {error && <div style={{color:RED, fontSize:12, marginBottom:10}}>{error}</div>}
+                <div style={{display:'flex', gap:8}}>
+                  <button className="btn" onClick={()=>setPin('')}
+                    style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:12, borderRadius:12, background:'#fff', border:'1.5px solid #E3DACB', color:NAVY, fontWeight:700, fontSize:13}}>
+                    <RotateCcw size={15}/> Xoá
+                  </button>
+                  <button className="btn" onClick={tryLogin}
+                    style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7, padding:12, borderRadius:12, background:NAVY, color:'#fff', fontWeight:700, fontSize:13}}>
+                    <LogIn size={15}/> Đăng nhập
+                  </button>
+                </div>
+              </>
+            )}
+
+            <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:18, paddingTop:14, borderTop:'1px solid #F0EBE0'}}>
+              <Info size={13} color="#A89B85"/>
+              <span style={{fontSize:11.5, color:'#8a8072'}}>Liên hệ Phòng KHTH khi cần hỗ trợ</span>
+            </div>
+          </div>
+
+          <div className="khth-login-benefits">
+            <div style={{fontSize:18, color:GOLD, fontStyle:'italic', fontFamily:'Georgia, serif', marginBottom:4}}>Cùng nhau thúc đẩy</div>
+            <h2 style={{margin:'0 0 10px', fontSize:24, fontWeight:800, color:'#fff', lineHeight:1.3, letterSpacing:'0.01em'}}>CÔNG TÁC KẾ HOẠCH TỔNG HỢP</h2>
+            <div style={{fontSize:13, color:'rgba(255,255,255,0.8)', marginBottom:26, lineHeight:1.5}}>
+              Vì sự phát triển bền vững của<br/>Bệnh viện Trường Đại học Y Dược Cần Thơ
+            </div>
+            <div style={{display:'flex', flexDirection:'column', gap:20}}>
+              {BENEFITS.map((b,i) => (
+                <div key={i} style={{display:'flex', alignItems:'center', gap:14}}>
+                  <div style={{width:44, height:44, borderRadius:'50%', border:`1.5px solid rgba(255,255,255,0.35)`, display:'flex', alignItems:'center', justifyContent:'center', color:GOLD, flexShrink:0}}>
+                    {b.icon}
+                  </div>
+                  <div>
+                    <div style={{fontWeight:700, fontSize:13.5, color:'#fff'}}>{b.title}</div>
+                    <div style={{fontSize:11.5, color:'rgba(255,255,255,0.68)', marginTop:1}}>{b.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:30, fontSize:13, color:GOLD, fontStyle:'italic', fontFamily:'Georgia, serif', lineHeight:1.6, display:'flex', alignItems:'center', gap:8}}>
+              <span>Vì chất lượng khám, chữa bệnh<br/>và sự hài lòng của người bệnh</span>
+              <Heart size={15} fill={GOLD} color={GOLD} style={{flexShrink:0}}/>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{position:'relative', zIndex:2, textAlign:'center', padding:'14px 16px', fontSize:11, color:'rgba(255,255,255,0.55)'}}>
-        © {new Date().getFullYear()} Phòng Kế hoạch Tổng hợp — Bệnh viện Trường Đại học Y Dược Cần Thơ
+      <div className="khth-footer-bar" style={{background:NAVY_DEEP, borderTop:`2px solid ${GOLD}`, display:'flex', alignItems:'center', justifyContent:'center', gap:22, padding:'13px 20px', flexWrap:'wrap'}}>
+        <div className="khth-footer-item">
+          <MapPin size={13} color={GOLD}/>
+          <span style={{fontSize:11.5, color:'rgba(255,255,255,0.85)'}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</span>
+        </div>
+        <div className="khth-footer-divider"/>
+        <div className="khth-footer-item">
+          <ShieldCheck size={13} color={GOLD}/>
+          <span style={{fontSize:11.5, color:'rgba(255,255,255,0.85)'}}>Hệ thống nội bộ</span>
+        </div>
+        <div className="khth-footer-divider"/>
+        <div className="khth-footer-item">
+          <Users size={13} color={GOLD}/>
+          <span style={{fontSize:11.5, color:'rgba(255,255,255,0.85)'}}>Phòng Kế hoạch Tổng hợp</span>
+        </div>
       </div>
     </div>
   );
