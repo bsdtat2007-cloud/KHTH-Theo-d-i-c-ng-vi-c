@@ -1157,85 +1157,74 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
   };
 
   const FEATURES = [
-    { icon: <ListTodo size={15}/>, text: 'Theo dõi tiến độ công việc theo thời gian thực' },
-    { icon: <ArchiveRestore size={15}/>, text: 'Quản lý quy trình văn bản nội bộ tập trung' },
-    { icon: <Mail size={15}/>, text: 'Tự động nhắc việc và gửi báo cáo qua email' },
+    { icon: <ListTodo size={16}/>, text: 'Theo dõi tiến độ công việc theo thời gian thực' },
+    { icon: <ArchiveRestore size={16}/>, text: 'Quản lý quy trình văn bản nội bộ tập trung' },
+    { icon: <Mail size={16}/>, text: 'Tự động nhắc việc và gửi báo cáo qua email' },
   ];
 
-  const HeaderBadge = ({ compact }) => (
-    <div style={{display:'flex', alignItems:'center', gap:compact?10:12}}>
-      <div style={{background:'#fff', borderRadius:'50%', padding:5, boxShadow:'0 8px 20px rgba(0,0,0,0.25)', flexShrink:0}}>
-        <HospitalCrest size={compact?40:44}/>
-      </div>
-      <div>
-        <div style={{fontSize:compact?10.5:11.5, letterSpacing:'0.06em', textTransform:'uppercase', color:'#fff', fontWeight:700, lineHeight:1.3}}>Trường Đại học Y Dược Cần Thơ</div>
-        <div style={{fontSize:10, color:GOLD, fontStyle:'italic', marginTop:2}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
-      </div>
-    </div>
-  );
+  const glassInputStyle = {
+    width:'100%', padding:'12px 42px 12px 14px', borderRadius:12, fontSize:16, letterSpacing:4, textAlign:'center',
+    background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.22)', color:'#fff',
+  };
 
   return (
-    <div style={{minHeight:'100vh', background:NAVY_DEEP, fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', flexDirection:'column'}}>
+    <div style={{minHeight:'100vh', position:'relative', backgroundImage:`url(${hospitalPhoto})`, backgroundSize:'cover', backgroundPosition:'center', fontFamily:"'Inter', -apple-system, sans-serif", display:'flex', flexDirection:'column', overflow:'hidden'}}>
       <style>{`
         .btn { cursor:pointer; border:none; font-family:inherit; }
         .btn:active{transform:scale(0.97);}
-        .khth-login-wrap { flex:1; display:flex; align-items:stretch; }
-        .khth-login-hero { flex:1.15; position:relative; display:flex; min-height:100vh; }
-        .khth-login-card-col { flex:1; min-width:360px; display:flex; align-items:center; justifyContent:center; padding:40px 24px; }
-        .khth-login-mobile-header { display:none; }
-        .khth-login-tab { flex:1; padding:11px 10px; border-radius:11px; display:flex; align-items:center; justify-content:center; gap:7px; font-weight:700; font-size:13px; }
-        @media (max-width: 880px) {
-          .khth-login-hero { display:none; }
-          .khth-login-mobile-header { display:flex; }
-          .khth-login-card-col { padding:28px 18px; }
+        .khth-glass-input::placeholder{ color:rgba(255,255,255,0.45); letter-spacing:4px; }
+        .khth-glass-select option{ color:#20242B; }
+        .khth-login-tab { flex:1; padding:12px 10px; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:7px; font-weight:700; font-size:13px; transition:all .18s ease; }
+        .khth-login-main { flex:1; display:flex; align-items:center; padding:56px 64px; }
+        .khth-login-hero-text { flex:1; min-width:300px; }
+        @media (max-width: 920px) {
+          .khth-login-main { padding:20px 16px 28px; justify-content:center; }
+          .khth-login-hero-text { display:none; }
         }
       `}</style>
 
-      <div className="khth-login-wrap">
-        <div className="khth-login-hero" style={{backgroundImage:`url(${hospitalPhoto})`, backgroundSize:'cover', backgroundPosition:'center'}}>
-          <div style={{position:'absolute', inset:0, background:`linear-gradient(180deg, rgba(10,22,46,0.45) 0%, rgba(10,22,46,0.15) 35%, rgba(8,18,38,0.75) 72%, rgba(6,14,30,0.95) 100%)`}}/>
-          <div style={{position:'relative', zIndex:1, display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'40px 44px', width:'100%'}}>
-            <HeaderBadge/>
+      <div style={{position:'absolute', inset:0, background:`linear-gradient(115deg, rgba(5,12,26,0.94) 0%, rgba(8,19,40,0.82) 34%, rgba(10,24,48,0.42) 58%, rgba(8,18,38,0.6) 100%)`}}/>
+      <div style={{position:'absolute', inset:0, background:`radial-gradient(circle at 82% 78%, rgba(240,180,41,0.16), transparent 42%)`}}/>
+      <div style={{position:'absolute', left:0, right:0, top:0, height:3, background:`linear-gradient(90deg, ${GOLD}, #fff4d2, ${GOLD})`, zIndex:2}}/>
 
-            <div style={{maxWidth:400}}>
-              <h1 style={{margin:'0 0 8px', fontSize:25, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', lineHeight:1.3}}>
-                Bộ công cụ theo dõi công việc
-              </h1>
-              <div style={{fontSize:12.5, color:'rgba(255,255,255,0.85)', fontWeight:600, marginBottom:18}}>Phòng Kế hoạch Tổng hợp</div>
-              <div style={{display:'flex', flexDirection:'column', gap:9}}>
-                {FEATURES.map((f,i) => (
-                  <div key={i} style={{display:'flex', alignItems:'center', gap:10}}>
-                    <div style={{background:'rgba(255,255,255,0.14)', borderRadius:8, padding:6.5, display:'flex', color:'#fff', flexShrink:0}}>{f.icon}</div>
-                    <span style={{fontSize:12, color:'rgba(255,255,255,0.92)'}}>{f.text}</span>
-                  </div>
-                ))}
-              </div>
+      <div style={{position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:13, padding:'26px 28px 0 32px'}}>
+        <div style={{background:'#fff', borderRadius:'50%', padding:5, boxShadow:`0 0 0 3px rgba(240,180,41,0.4), 0 10px 26px rgba(0,0,0,0.45)`, flexShrink:0}}>
+          <HospitalCrest size={42}/>
+        </div>
+        <div>
+          <div style={{fontSize:11.5, letterSpacing:'0.07em', textTransform:'uppercase', color:'#fff', fontWeight:700, textShadow:'0 2px 10px rgba(0,0,0,0.5)'}}>Trường Đại học Y Dược Cần Thơ</div>
+          <div style={{fontSize:10.5, color:GOLD, fontStyle:'italic', marginTop:2}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
+        </div>
+      </div>
+
+      <div className="khth-login-main" style={{position:'relative', zIndex:2}}>
+        <div style={{display:'flex', width:'100%', maxWidth:1120, margin:'0 auto', alignItems:'center', gap:56, flexWrap:'wrap', justifyContent:'center'}}>
+
+          <div className="khth-login-hero-text">
+            <h1 style={{margin:'0 0 12px', fontSize:38, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff', lineHeight:1.22, textShadow:'0 6px 24px rgba(0,0,0,0.55)'}}>
+              Bộ công cụ theo<br/>dõi công việc
+            </h1>
+            <div style={{fontSize:14, color:GOLD, fontWeight:700, marginBottom:30, letterSpacing:'0.02em'}}>Phòng Kế hoạch Tổng hợp</div>
+            <div style={{display:'flex', flexDirection:'column', gap:15}}>
+              {FEATURES.map((f,i) => (
+                <div key={i} style={{display:'flex', alignItems:'center', gap:14}}>
+                  <div style={{background:'rgba(255,255,255,0.1)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.16)', borderRadius:11, padding:10, display:'flex', color:GOLD, flexShrink:0}}>{f.icon}</div>
+                  <span style={{fontSize:13.5, color:'rgba(255,255,255,0.92)', fontWeight:500}}>{f.text}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        <div className="khth-login-card-col" style={{background:`radial-gradient(circle at 50% 0%, ${SKY} 0%, ${SKY_DEEP} 45%, ${NAVY_DEEP} 100%)`}}>
-          <div style={{width:'100%', maxWidth:380, background:'#fff', borderRadius:20, overflow:'hidden', boxShadow:'0 24px 60px rgba(8,20,45,0.45)'}}>
+          <div style={{width:'100%', maxWidth:400, borderRadius:27, padding:'1.5px', background:`linear-gradient(150deg, rgba(240,180,41,0.6), rgba(255,255,255,0.08) 45%, rgba(240,180,41,0.3))`, boxShadow:'0 32px 80px rgba(0,0,0,0.55)', flexShrink:0}}>
+            <div style={{borderRadius:25.5, background:'rgba(13,28,56,0.55)', backdropFilter:'blur(26px)', WebkitBackdropFilter:'blur(26px)', padding:'30px 26px', border:'1px solid rgba(255,255,255,0.08)'}}>
 
-            <div className="khth-login-mobile-header" style={{background:`linear-gradient(160deg, ${SKY_DEEP} 0%, ${NAVY} 100%)`, padding:'26px 24px 22px', textAlign:'center', flexDirection:'column', alignItems:'center'}}>
-              <div style={{display:'flex', justifyContent:'center', marginBottom:10}}>
-                <div style={{background:'#fff', borderRadius:'50%', padding:6, boxShadow:'0 8px 20px rgba(0,0,0,0.25)'}}>
-                  <HospitalCrest size={46}/>
-                </div>
-              </div>
-              <div style={{fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'#fff', fontWeight:700}}>Bệnh viện Trường Đại học Y Dược Cần Thơ</div>
-              <div style={{fontSize:10, color:GOLD, fontStyle:'italic', marginTop:3}}>Chuẩn chuyên môn · Tận tâm phục vụ</div>
-              <h1 style={{margin:'10px 0 0', fontSize:16.5, fontWeight:800, fontFamily:'Georgia, serif', color:'#fff'}}>BỘ CÔNG CỤ THEO DÕI CÔNG VIỆC</h1>
-            </div>
-
-            <div style={{padding:'26px 24px 28px'}}>
-              <div style={{display:'flex', gap:6, padding:4, background:'#F0EBE0', borderRadius:13, marginBottom:20}}>
+              <div style={{display:'flex', gap:6, padding:4, background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, marginBottom:22}}>
                 <button type="button" className="btn khth-login-tab" onClick={selectStaffTab}
-                  style={{background: !showLogin ? '#fff' : 'transparent', color: !showLogin ? NAVY : '#8a8072', boxShadow: !showLogin ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'}}>
+                  style={{background: !showLogin ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'transparent', color: !showLogin ? NAVY_DEEP : 'rgba(255,255,255,0.65)', boxShadow: !showLogin ? '0 4px 14px rgba(240,180,41,0.35)' : 'none'}}>
                   <User size={15}/> Nhân viên
                 </button>
                 <button type="button" className="btn khth-login-tab" onClick={selectAdminTab}
-                  style={{background: showLogin ? '#fff' : 'transparent', color: showLogin ? NAVY : '#8a8072', boxShadow: showLogin ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'}}>
+                  style={{background: showLogin ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'transparent', color: showLogin ? NAVY_DEEP : 'rgba(255,255,255,0.65)', boxShadow: showLogin ? '0 4px 14px rgba(240,180,41,0.35)' : 'none'}}>
                   <ShieldCheck size={15}/> Quản lý
                 </button>
               </div>
@@ -1243,55 +1232,55 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
               {!showLogin ? (
                 staffStep === 'pick' ? (
                   <>
-                    <div style={{fontSize:12.5, color:'#6b6258', marginBottom:10}}>Chọn tên của bạn để tiếp tục</div>
-                    <select value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
-                      style={{width:'100%', padding:'11px 12px', borderRadius:10, border:'1px solid #E3DACB', fontSize:13.5, marginBottom:12, background:'#fff'}}>
+                    <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Chọn tên của bạn để tiếp tục</div>
+                    <select className="khth-glass-select" value={selectedStaff} onChange={e=>setSelectedStaff(e.target.value)}
+                      style={{width:'100%', padding:'12px 12px', borderRadius:12, border:'1px solid rgba(255,255,255,0.22)', fontSize:13.5, marginBottom:14, background:'rgba(255,255,255,0.08)', color: selectedStaff ? '#fff' : 'rgba(255,255,255,0.55)'}}>
                       <option value="">Chọn tên của bạn...</option>
                       {staffList.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <button className="btn" disabled={!selectedStaff} onClick={goToStaffPin}
-                      style={{width:'100%', padding:12, borderRadius:10, background: selectedStaff ? NAVY : '#E3DACB', color:'#fff', fontWeight:700, fontSize:13.5}}>
+                      style={{width:'100%', padding:13, borderRadius:12, background: selectedStaff ? `linear-gradient(135deg, ${GOLD}, #D99A0B)` : 'rgba(255,255,255,0.1)', color: selectedStaff ? NAVY_DEEP : 'rgba(255,255,255,0.4)', fontWeight:800, fontSize:13.5, boxShadow: selectedStaff ? '0 8px 22px rgba(240,180,41,0.3)' : 'none'}}>
                       Tiếp tục
                     </button>
                   </>
                 ) : (
                   <>
-                    <div style={{fontSize:12.5, color:'#6b6258', marginBottom:10}}>Nhập mã PIN của <strong>{selectedStaff}</strong></div>
+                    <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Nhập mã PIN của <strong style={{color:'#fff'}}>{selectedStaff}</strong></div>
                     <div style={{position:'relative', marginBottom:12}}>
-                      <input type={showStaffPin ? 'text' : 'password'} value={staffPin} onChange={e=>{setStaffPin(e.target.value); setStaffError('');}}
+                      <input type={showStaffPin ? 'text' : 'password'} className="khth-glass-input" value={staffPin} onChange={e=>{setStaffPin(e.target.value); setStaffError('');}}
                         onKeyDown={e => e.key==='Enter' && tryStaffLogin()}
                         placeholder="••••" autoFocus inputMode="numeric" maxLength={6}
-                        style={{width:'100%', padding:'12px 42px 12px 12px', borderRadius:10, border:'1px solid #E3DACB', fontSize:16, letterSpacing:4, textAlign:'center'}}/>
+                        style={glassInputStyle}/>
                       <button type="button" className="btn" onClick={()=>setShowStaffPin(v=>!v)}
-                        style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'#8a8072', padding:4}}>
+                        style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'rgba(255,255,255,0.6)', padding:4}}>
                         {showStaffPin ? <EyeOff size={17}/> : <Eye size={17}/>}
                       </button>
                     </div>
-                    {staffError && <div style={{color:RED, fontSize:12, marginBottom:10}}>{staffError}</div>}
+                    {staffError && <div style={{color:'#FF9EAD', fontSize:12, marginBottom:10}}>{staffError}</div>}
                     <div style={{display:'flex', gap:8}}>
                       <button className="btn" onClick={()=>{setStaffStep('pick'); setStaffError('');}}
-                        style={{flex:1, padding:11, borderRadius:10, background:'#F0EBE0', color:'#6b6258', fontWeight:600, fontSize:13.5}}>Quay lại</button>
+                        style={{flex:1, padding:12, borderRadius:12, background:'rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.8)', fontWeight:600, fontSize:13.5}}>Quay lại</button>
                       <button className="btn" onClick={tryStaffLogin}
-                        style={{flex:1, padding:11, borderRadius:10, background:NAVY, color:'#fff', fontWeight:700, fontSize:13.5}}>Vào</button>
+                        style={{flex:1, padding:12, borderRadius:12, background:`linear-gradient(135deg, ${GOLD}, #D99A0B)`, color:NAVY_DEEP, fontWeight:800, fontSize:13.5, boxShadow:'0 8px 22px rgba(240,180,41,0.3)'}}>Vào</button>
                     </div>
                   </>
                 )
               ) : (
                 <>
-                  <div style={{fontSize:12.5, color:'#6b6258', marginBottom:10}}>Nhập mã PIN quản lý</div>
+                  <div style={{fontSize:12.5, color:'rgba(255,255,255,0.7)', marginBottom:10}}>Nhập mã PIN quản lý</div>
                   <div style={{position:'relative', marginBottom:12}}>
-                    <input type={showAdminPin ? 'text' : 'password'} value={pin} onChange={e=>{setPin(e.target.value); setError('');}}
+                    <input type={showAdminPin ? 'text' : 'password'} className="khth-glass-input" value={pin} onChange={e=>{setPin(e.target.value); setError('');}}
                       onKeyDown={e => e.key==='Enter' && tryLogin()}
                       placeholder="••••" autoFocus
-                      style={{width:'100%', padding:'12px 42px 12px 12px', borderRadius:10, border:'1px solid #E3DACB', fontSize:16, letterSpacing:4, textAlign:'center'}}/>
+                      style={glassInputStyle}/>
                     <button type="button" className="btn" onClick={()=>setShowAdminPin(v=>!v)}
-                      style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'#8a8072', padding:4}}>
+                      style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'transparent', color:'rgba(255,255,255,0.6)', padding:4}}>
                       {showAdminPin ? <EyeOff size={17}/> : <Eye size={17}/>}
                     </button>
                   </div>
-                  {error && <div style={{color:RED, fontSize:12, marginBottom:10}}>{error}</div>}
+                  {error && <div style={{color:'#FF9EAD', fontSize:12, marginBottom:10}}>{error}</div>}
                   <button className="btn" onClick={tryLogin}
-                    style={{width:'100%', padding:12, borderRadius:10, background:NAVY, color:'#fff', fontWeight:700, fontSize:13.5}}>Vào</button>
+                    style={{width:'100%', padding:13, borderRadius:12, background:`linear-gradient(135deg, ${GOLD}, #D99A0B)`, color:NAVY_DEEP, fontWeight:800, fontSize:13.5, boxShadow:'0 8px 22px rgba(240,180,41,0.3)'}}>Vào</button>
                 </>
               )}
             </div>
@@ -1299,7 +1288,7 @@ function RoleGate({ onAdmin, onStaff, staffList, showLogin, onCancelLogin, onAdm
         </div>
       </div>
 
-      <div style={{textAlign:'center', padding:'11px 16px', fontSize:11, color:'rgba(255,255,255,0.55)', background:'rgba(0,0,0,0.18)'}}>
+      <div style={{position:'relative', zIndex:2, textAlign:'center', padding:'14px 16px', fontSize:11, color:'rgba(255,255,255,0.55)'}}>
         © {new Date().getFullYear()} Phòng Kế hoạch Tổng hợp — Bệnh viện Trường Đại học Y Dược Cần Thơ
       </div>
     </div>
